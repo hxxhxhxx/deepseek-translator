@@ -1,0 +1,299 @@
+<Window x:Class="DeepSeekTranslator.Views.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DeepSeek 翻译"
+        Width="440"
+        MaxHeight="680"
+        SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <Grid Margin="12">
+        <Border Background="#FFFFFF"
+                BorderBrush="#1F0F172A"
+                BorderThickness="1"
+                CornerRadius="18">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="34"
+                                  ShadowDepth="8"
+                                  Opacity="0.24"
+                                  Color="#0F172A" />
+            </Border.Effect>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- 标题栏：按住可拖动整个浮层 -->
+                <Border x:Name="HeaderBar"
+                        Grid.Row="0"
+                        Padding="16,14,14,12"
+                        BorderBrush="#EEF2F7"
+                        BorderThickness="0,0,0,1"
+                        Background="#F8FAFC"
+                        CornerRadius="18,18,0,0"
+                        Cursor="SizeAll"
+                        ToolTip="按住标题栏可拖动浮层"
+                        MouseLeftButtonDown="HeaderBar_MouseLeftButtonDown">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0"
+                                Width="32"
+                                Height="32"
+                                CornerRadius="9"
+                                Background="{StaticResource PrimaryBrush}">
+                            <TextBlock Text="D"
+                                       Foreground="White"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
+                            <TextBlock Text="DeepSeek 翻译"
+                                       FontSize="14"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource InkBrush}" />
+                            <TextBlock Text="选中文本 · 中英互译"
+                                       FontSize="10.5"
+                                       Foreground="{StaticResource MutedBrush}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="⋮⋮"
+                                       FontSize="12"
+                                       Foreground="#94A3B8"
+                                       Margin="0,0,6,0"
+                                       VerticalAlignment="Center"
+                                       IsHitTestVisible="False"
+                                       ToolTip="按住标题栏可拖动浮层" />
+                            <Button x:Name="CloseButton"
+                                    Style="{StaticResource IconButton}"
+                                    Content="×"
+                                    ToolTip="关闭"
+                                    Click="CloseButton_Click" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 内容 -->
+                <ScrollViewer Grid.Row="1"
+                              x:Name="BodyScroller"
+                              MaxHeight="500"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="16,13,16,0">
+                        <Grid x:Name="OriginalHeaderRow">
+                            <TextBlock Text="原文"
+                                       Style="{StaticResource SectionLabel}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="OriginalCountText"
+                                       HorizontalAlignment="Right"
+                                       FontSize="10"
+                                       Foreground="#94A3B8" />
+                        </Grid>
+
+                        <Border x:Name="OriginalCard"
+                                Margin="0,6,0,0"
+                                Padding="10,8"
+                                Background="#F8FAFC"
+                                BorderBrush="#EEF2F7"
+                                BorderThickness="1"
+                                CornerRadius="9">
+                            <ScrollViewer MaxHeight="74" VerticalScrollBarVisibility="Auto">
+                                <TextBlock x:Name="OriginalText"
+                                           FontSize="12"
+                                           Foreground="#475569"
+                                           TextWrapping="Wrap"
+                                           LineHeight="18" />
+                            </ScrollViewer>
+                        </Border>
+
+                        <Border x:Name="DividerLine" Height="1" Margin="0,12,0,11" Background="#EEF2F7" />
+
+                        <Grid>
+                            <TextBlock x:Name="TranslationLabel"
+                                       Text="译文"
+                                       Style="{StaticResource SectionLabel}"
+                                       VerticalAlignment="Center" />
+                            <Button x:Name="CopyButton"
+                                    HorizontalAlignment="Right"
+                                    Height="25"
+                                    Padding="9,0"
+                                    FontSize="10.5"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Content="复制全文"
+                                    ToolTip="复制全部译文；只复制一部分请先拖选文字，按 Ctrl+C 或右键"
+                                    Visibility="Collapsed"
+                                    Click="CopyButton_Click" />
+                        </Grid>
+
+                        <Grid Margin="0,5,0,0">
+                            <StackPanel x:Name="LoadingPanel"
+                                        Orientation="Horizontal"
+                                        Margin="0,8,0,8"
+                                        Visibility="Collapsed">
+                                <ProgressBar Width="20"
+                                             Height="5"
+                                             IsIndeterminate="True"
+                                             Foreground="{StaticResource PrimaryBrush}"
+                                             Background="#DBEAFE"
+                                             BorderThickness="0"
+                                             VerticalAlignment="Center" />
+                                <TextBlock Text="正在调用 DeepSeek 翻译…"
+                                           Margin="9,0,0,0"
+                                           FontSize="11.5"
+                                           Foreground="{StaticResource MutedBrush}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <Border x:Name="ErrorPanel"
+                                    Padding="10"
+                                    Background="#FEF2F2"
+                                    BorderBrush="#FECACA"
+                                    BorderThickness="1"
+                                    CornerRadius="9"
+                                    Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="18"
+                                            Height="18"
+                                            CornerRadius="9"
+                                            Background="#DC2626"
+                                            VerticalAlignment="Top"
+                                            Margin="0,1,8,0">
+                                        <TextBlock Text="!"
+                                                   Foreground="White"
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock x:Name="ErrorText"
+                                                   FontSize="11.5"
+                                                   Foreground="#991B1B"
+                                                   TextWrapping="Wrap"
+                                                   LineHeight="18" />
+                                        <Button x:Name="ErrorSettingsButton"
+                                                Style="{StaticResource LinkButton}"
+                                                Foreground="#B91C1C"
+                                                Content="打开设置"
+                                                Margin="0,5,0,0"
+                                                Visibility="Collapsed"
+                                                Click="SettingsButton_Click" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <TextBox x:Name="TranslationText"
+                                     FontSize="15"
+                                     Foreground="{StaticResource InkBrush}"
+                                     TextWrapping="Wrap"
+                                     IsReadOnly="True"
+                                     IsReadOnlyCaretVisible="False"
+                                     AcceptsReturn="True"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     Padding="0"
+                                     IsTabStop="False"
+                                     TextAlignment="Left"
+                                     VerticalContentAlignment="Top"
+                                     VerticalScrollBarVisibility="Disabled"
+                                     HorizontalScrollBarVisibility="Disabled"
+                                     IsInactiveSelectionHighlightEnabled="True"
+                                     Cursor="IBeam"
+                                     ToolTip="可以拖选部分译文，按 Ctrl+C 或右键复制"
+                                     Visibility="Collapsed"
+                                     PreviewMouseWheel="TranslationText_PreviewMouseWheel">
+                                <TextBox.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="复制选中" Click="CopySelectionMenu_Click" />
+                                        <MenuItem Header="全选" Click="SelectAllMenu_Click" />
+                                        <Separator />
+                                        <MenuItem Header="复制全文" Click="CopyButton_Click" />
+                                    </ContextMenu>
+                                </TextBox.ContextMenu>
+                            </TextBox>
+                        </Grid>
+
+                        <Border x:Name="WarningPanel"
+                                Margin="0,9,0,0"
+                                Padding="8,6"
+                                Background="#FFFBEB"
+                                CornerRadius="7"
+                                Visibility="Collapsed">
+                            <TextBlock FontSize="10.5"
+                                       Foreground="#92400E"
+                                       TextWrapping="Wrap"
+                                       Text="译文达到输出长度上限，可能不完整。请缩短选区后重试。" />
+                        </Border>
+
+                        <TextBlock x:Name="MetaText"
+                                   Margin="0,8,0,10"
+                                   FontSize="10"
+                                   Foreground="#94A3B8" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 底部操作 -->
+                <Border Grid.Row="2"
+                        Padding="16,9,14,11"
+                        BorderBrush="#EEF2F7"
+                        BorderThickness="0,1,0,0"
+                        Background="#FBFDFF"
+                        CornerRadius="0,0,18,18">
+                    <Grid>
+                        <Button x:Name="SettingsButton"
+                                Style="{StaticResource LinkButton}"
+                                Content="设置"
+                                VerticalAlignment="Center"
+                                Click="SettingsButton_Click" />
+
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right">
+                            <Button x:Name="RetryButton"
+                                    Height="28"
+                                    Padding="12,0"
+                                    FontSize="10.5"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Content="重试"
+                                    Visibility="Collapsed"
+                                    Click="RetryButton_Click" />
+                            <Button x:Name="FooterCloseButton"
+                                    Height="28"
+                                    Padding="12,0"
+                                    Margin="7,0,0,0"
+                                    FontSize="10.5"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Content="关闭"
+                                    Click="CloseButton_Click" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

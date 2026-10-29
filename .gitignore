@@ -1,0 +1,20 @@
+# Build output
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Local toolchain and packaged releases (not part of the source repo)
+tools/
+releases/
+installer/Output/
+
+# Local runtime data
+secret.dat
+settings.json
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
