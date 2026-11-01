@@ -26,6 +26,14 @@ internal static class Program
             ShutdownMode = ShutdownMode.OnExplicitShutdown
         };
 
+        // 浮层用到 App.xaml 里的样式资源，测试进程也要把它们加载进来。
+        app.Resources.MergedDictionaries.Add(new ResourceDictionary
+        {
+            Source = new Uri(
+                "pack://application:,,,/DeepSeekTranslator;component/Resources/Styles.xaml",
+                UriKind.Absolute)
+        });
+
         var textBox = new TextBox
         {
             Text = "Hello UIA smoke test 你好",
@@ -99,6 +107,62 @@ internal static class Program
                         exitCode = 1;
                     }
                 }
+
+                var wrote = await ClipboardWriter.TrySetTextAsync("clipboard-writer-smoke");
+                if (wrote && System.Windows.Clipboard.GetText() == "clipboard-writer-smoke")
+                {
+                    Console.WriteLine("PASS  写剪贴板（Win32）");
+                }
+                else
+                {
+                    Console.WriteLine($"SKIP  写剪贴板未成功（wrote={wrote}，可能被其他程序占用）");
+                }
+
+                // 流式代次：拖动造成的积压增量不能覆盖已经落地的最终结果。
+                var overlay = new DeepSeekTranslator.Views.OverlayWindow();
+                overlay.ShowLoading(
+                    "source text",
+                    new PixelRect(200, 200, 201, 201),
+                    TranslationDirection.ChineseToEnglish);
+                var epoch = overlay.CurrentStreamEpoch;
+                overlay.ShowStreaming(
+                    "部分译文",
+                    TranslationDirection.ChineseToEnglish,
+                    epoch);
+                overlay.ShowResult(
+                    new TranslationResult("完整译文", "model", "version", "model", "model", false, 10, 100),
+                    TranslationDirection.ChineseToEnglish);
+                overlay.ShowStreaming(
+                    "过期的部分译文",
+                    TranslationDirection.ChineseToEnglish,
+                    epoch);
+
+                var translationBox = overlay.FindName("TranslationText") as TextBox;
+                if (translationBox?.Text == "完整译文")
+                {
+                    Console.WriteLine("PASS  过期流式增量不会覆盖最终结果");
+                }
+                else
+                {
+                    Console.WriteLine($"FAIL  流式代次保护: {translationBox?.Text}");
+                    exitCode = 1;
+                }
+
+                overlay.ShowWordDetail("article", "音标：/ˈɑːtɪkl/");
+                var wordPanel = overlay.FindName("WordPanel") as Border;
+                var wordDetail = overlay.FindName("WordDetailText") as TextBox;
+                if (wordPanel?.Visibility == Visibility.Visible &&
+                    wordDetail?.Text.Contains("音标", StringComparison.Ordinal) == true)
+                {
+                    Console.WriteLine("PASS  单词详解面板显示");
+                }
+                else
+                {
+                    Console.WriteLine("FAIL  单词详解面板未显示");
+                    exitCode = 1;
+                }
+
+                overlay.ForceClose();
 
                 var hotkeySettings = new AppSettings
                 {

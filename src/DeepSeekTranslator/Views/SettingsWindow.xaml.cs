@@ -35,6 +35,10 @@ public partial class SettingsWindow : Window
         SelectOcrLanguage(_settings.OcrLanguage);
         AutoStartCheckBox.IsChecked = _settings.AutoStart;
         SelectionIconCheckBox.IsChecked = _settings.ShowSelectionIcon;
+        EnableCacheCheckBox.IsChecked = _settings.EnableCache;
+        EnableStreamingCheckBox.IsChecked = _settings.EnableStreaming;
+        GlossaryBox.Text = _settings.Glossary;
+        UpdateGlossaryCount();
         LoadHotkeys();
 
         foreach (var box in new[]
@@ -51,7 +55,7 @@ public partial class SettingsWindow : Window
 
         UpdateUsageHint();
 
-        FooterText.Text = $"DeepSeek 划词翻译 {AppInfo.Version} · 内部使用";
+        FooterText.Text = $"DeepSeek 划词翻译 {AppInfo.Version}";
 
         UpdateKeyStatus();
         UpdateModelDescription();
@@ -120,6 +124,9 @@ public partial class SettingsWindow : Window
                 : ModelCatalog.DefaultModel;
             _settings.AutoStart = autoStart;
             _settings.ShowSelectionIcon = SelectionIconCheckBox.IsChecked == true;
+            _settings.EnableCache = EnableCacheCheckBox.IsChecked == true;
+            _settings.EnableStreaming = EnableStreamingCheckBox.IsChecked == true;
+            _settings.Glossary = GlossaryBox.Text.Trim();
             _settings.OcrLanguage = ocrLanguage;
             _settings.TranslateSelectionHotkey = hotkeys.Selection.Display;
             _settings.TranslateClipboardHotkey = hotkeys.Clipboard.Display;
@@ -296,6 +303,18 @@ public partial class SettingsWindow : Window
     {
         HotkeyCard.BringIntoView();
         TranslateSelectionHotkeyBox.Focus();
+    }
+
+    private void GlossaryBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        UpdateGlossaryCount();
+    }
+
+    private void UpdateGlossaryCount()
+    {
+        if (GlossaryCountText is null) return;
+        var count = Glossary.Parse(GlossaryBox.Text).Count;
+        GlossaryCountText.Text = $"{count} 条 / 最多 {Glossary.MaxEntries} 条";
     }
 
     private void LoadHotkeys()

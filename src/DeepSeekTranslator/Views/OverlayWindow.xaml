@@ -16,8 +16,10 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         PreviewKeyDown="Window_PreviewKeyDown">
-    <Grid Margin="12">
-        <Border Background="#FFFFFF"
+    <Grid>
+        <Grid Margin="12">
+        <Border x:Name="CardBorder"
+                Background="#FFFFFF"
                 BorderBrush="#1F0F172A"
                 BorderThickness="1"
                 CornerRadius="18">
@@ -103,11 +105,20 @@
                               HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="16,13,16,0">
                         <Grid x:Name="OriginalHeaderRow">
-                            <TextBlock Text="原文"
-                                       Style="{StaticResource SectionLabel}"
-                                       VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="原文"
+                                           Style="{StaticResource SectionLabel}"
+                                           VerticalAlignment="Center" />
+                                <Button x:Name="ExplainWordButton"
+                                        Style="{StaticResource LinkButton}"
+                                        Content="详解"
+                                        Margin="10,0,0,0"
+                                        ToolTip="先在原文中选中一个单词，再点这里查看词性、释义和用法"
+                                        Click="ExplainWordButton_Click" />
+                            </StackPanel>
                             <TextBlock x:Name="OriginalCountText"
                                        HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
                                        FontSize="10"
                                        Foreground="#94A3B8" />
                         </Grid>
@@ -120,11 +131,32 @@
                                 BorderThickness="1"
                                 CornerRadius="9">
                             <ScrollViewer MaxHeight="74" VerticalScrollBarVisibility="Auto">
-                                <TextBlock x:Name="OriginalText"
-                                           FontSize="12"
-                                           Foreground="#475569"
-                                           TextWrapping="Wrap"
-                                           LineHeight="18" />
+                                <TextBox x:Name="OriginalText"
+                                         FontSize="12"
+                                         Foreground="#475569"
+                                         TextWrapping="Wrap"
+                                         IsReadOnly="True"
+                                         IsReadOnlyCaretVisible="False"
+                                         AcceptsReturn="True"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         Padding="0"
+                                         IsTabStop="False"
+                                         VerticalContentAlignment="Top"
+                                         VerticalScrollBarVisibility="Disabled"
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         IsInactiveSelectionHighlightEnabled="True"
+                                         Cursor="IBeam"
+                                         ToolTip="选中单词后点上方「详解」或右键查询"
+                                         PreviewMouseWheel="TranslationText_PreviewMouseWheel">
+                                    <TextBox.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="详解选中单词" Click="ExplainWordButton_Click" />
+                                            <MenuItem Header="复制选中" Click="CopyOriginalSelection_Click" />
+                                            <MenuItem Header="全选" Click="SelectAllOriginal_Click" />
+                                        </ContextMenu>
+                                    </TextBox.ContextMenu>
+                                </TextBox>
                             </ScrollViewer>
                         </Border>
 
@@ -251,6 +283,46 @@
                                        Text="译文达到输出长度上限，可能不完整。请缩短选区后重试。" />
                         </Border>
 
+                        <Border x:Name="WordPanel"
+                                Margin="0,9,0,0"
+                                Padding="10,8"
+                                Background="#F8FAFC"
+                                BorderBrush="#E2E8F0"
+                                BorderThickness="1"
+                                CornerRadius="9"
+                                Visibility="Collapsed">
+                            <StackPanel>
+                                <Grid>
+                                    <TextBlock x:Name="WordTitle"
+                                               FontSize="11.5"
+                                               FontWeight="Bold"
+                                               Foreground="#0F172A"
+                                               VerticalAlignment="Center" />
+                                    <Button x:Name="WordCloseButton"
+                                            Content="关闭"
+                                            HorizontalAlignment="Right"
+                                            Style="{StaticResource LinkButton}"
+                                            Click="WordCloseButton_Click" />
+                                </Grid>
+                                <TextBox x:Name="WordDetailText"
+                                         Margin="0,6,0,0"
+                                         FontSize="11.5"
+                                         Foreground="#334155"
+                                         TextWrapping="Wrap"
+                                         IsReadOnly="True"
+                                         IsReadOnlyCaretVisible="False"
+                                         AcceptsReturn="True"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         Padding="0"
+                                         IsTabStop="False"
+                                         VerticalScrollBarVisibility="Disabled"
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         IsInactiveSelectionHighlightEnabled="True"
+                                         PreviewMouseWheel="TranslationText_PreviewMouseWheel" />
+                            </StackPanel>
+                        </Border>
+
                         <TextBlock x:Name="MetaText"
                                    Margin="0,8,0,10"
                                    FontSize="10"
@@ -295,5 +367,63 @@
                 </Border>
             </Grid>
         </Border>
+        </Grid>
+
+        <!-- 左右边缘：按住拖动可调整浮层宽度（窄/宽），透明区域不影响正文与滚动条 -->
+        <Thumb x:Name="LeftResizeThumb"
+               Width="12"
+               HorizontalAlignment="Left"
+               VerticalAlignment="Stretch"
+               Cursor="SizeWE"
+               ToolTip="左右拖动调整浮层宽度"
+               DragStarted="ResizeThumb_DragStarted"
+               DragDelta="ResizeThumb_DragDelta"
+               DragCompleted="ResizeThumb_DragCompleted">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="Transparent">
+                        <Border x:Name="HoverLine"
+                                Width="2"
+                                HorizontalAlignment="Left"
+                                Background="#3B82F6"
+                                CornerRadius="1"
+                                Opacity="0" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="HoverLine" Property="Opacity" Value="0.85" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
+
+        <Thumb x:Name="RightResizeThumb"
+               Width="12"
+               HorizontalAlignment="Right"
+               VerticalAlignment="Stretch"
+               Cursor="SizeWE"
+               ToolTip="左右拖动调整浮层宽度"
+               DragStarted="ResizeThumb_DragStarted"
+               DragDelta="ResizeThumb_DragDelta"
+               DragCompleted="ResizeThumb_DragCompleted">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="Transparent">
+                        <Border x:Name="HoverLine"
+                                Width="2"
+                                HorizontalAlignment="Right"
+                                Background="#3B82F6"
+                                CornerRadius="1"
+                                Opacity="0" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="HoverLine" Property="Opacity" Value="0.85" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
     </Grid>
 </Window>

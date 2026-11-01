@@ -21,6 +21,20 @@ public sealed class AppSettings
     /// </summary>
     public bool GameMode { get; set; }
 
+    /// <summary>浮层宽度（DIP，320~960）；用户拖动边缘后记住。</summary>
+    public double OverlayWidth { get; set; } = 440;
+
+    /// <summary>
+    /// 术语表：每行一条 <c>原文=译文</c>；译文留空表示保留原文。
+    /// </summary>
+    public string Glossary { get; set; } = "";
+
+    /// <summary>相同文本再次翻译时直接命中本地缓存。</summary>
+    public bool EnableCache { get; set; } = true;
+
+    /// <summary>边生成边显示译文；关闭后等完整结果再显示。</summary>
+    public bool EnableStreaming { get; set; } = true;
+
     public string OcrLanguage { get; set; } = "";
 
     public string TranslateSelectionHotkey { get; set; } = "Ctrl+Alt+E";

@@ -71,6 +71,23 @@ public sealed class OcrService
         }
     }
 
+    /// <summary>当前 Windows 安装的 OCR 识别语言（用于诊断面板）。</summary>
+    public static IReadOnlyList<string> GetAvailableLanguages()
+    {
+        try
+        {
+            return OcrEngine.AvailableRecognizerLanguages
+                .Select(language => language.LanguageTag)
+                .OrderBy(tag => tag)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("读取 OCR 语言列表失败", ex);
+            return Array.Empty<string>();
+        }
+    }
+
     private static OcrEngine? CreateEngine(string preferredLanguage)
     {
         if (!string.IsNullOrWhiteSpace(preferredLanguage))

@@ -68,7 +68,9 @@ public sealed class CaptureCoordinator
             }
         }
 
-        var clipboard = await _clipboard.TryCopySelectionAsync(cancellationToken)
+        var clipboard = await _clipboard.TryCopySelectionAsync(
+                cancellationToken,
+                AppCompatibility.IsBrowser(appName))
             .ConfigureAwait(false);
 
         if (!string.IsNullOrWhiteSpace(clipboard.Text))

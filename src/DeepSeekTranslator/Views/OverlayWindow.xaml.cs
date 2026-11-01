@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
@@ -14,17 +15,29 @@ public partial class OverlayWindow : Window
     /// <summary>浮层刚出现时忽略输入的宽限时间，避免触发它的那次点击/按键立刻把它关掉。</summary>
     private const int DismissGraceMilliseconds = 450;
 
+    /// <summary>浮层可调宽度的范围（DIP）。</summary>
+    public const double MinWidthDip = 320;
+
+    public const double MaxWidthDip = 960;
+
     private readonly DispatcherTimer _copyResetTimer;
+    private readonly System.Windows.Media.Effects.Effect? _cardShadow;
     private PixelRect? _anchor;
     private TranslationDirection _direction = TranslationDirection.Unknown;
     private bool _allowClose;
     private bool _userPositioned;
+    private bool _resizing;
+    private bool _dragging;
+    private bool _streaming;
+    private int _streamEpoch;
     private InputWatcher? _inputWatcher;
     private long _shownAtTicks;
 
     public OverlayWindow()
     {
         InitializeComponent();
+
+        _cardShadow = CardBorder.Effect;
 
         _copyResetTimer = new DispatcherTimer
         {
@@ -39,13 +52,28 @@ public partial class OverlayWindow : Window
         SourceInitialized += OnSourceInitialized;
         SizeChanged += (_, _) =>
         {
-            if (IsVisible) RepositionAfterLayout();
+            // 流式输出时文字持续变长，不移动窗口，避免抖动；结果到达后再统一落位。
+            if (!IsVisible || _resizing || _streaming) return;
+            RepositionAfterLayout();
         };
     }
 
     public event Action? RetryRequested;
 
     public event Action? SettingsRequested;
+
+    /// <summary>用户请求详解原文中选中的单词；参数为单词和原文上下文。</summary>
+    public event Action<string, string?>? ExplainRequested;
+
+    /// <summary>用户拖动边缘调整宽度后触发，参数为新的宽度（DIP）。</summary>
+    public event Action<double>? WidthChanged;
+
+    /// <summary>恢复上次使用的宽度；非法值回落到默认 440。</summary>
+    public double PreferredWidth
+    {
+        get => Width;
+        set => Width = Math.Clamp(value, MinWidthDip, MaxWidthDip);
+    }
 
     public void ShowLoading(
         string original,
@@ -54,6 +82,9 @@ public partial class OverlayWindow : Window
     {
         // 新一轮翻译重新跟随选区定位；用户手动拖动的状态在这里清除。
         _userPositioned = false;
+        _streaming = false;
+        _streamEpoch++;
+        WordPanel.Visibility = Visibility.Collapsed;
         _direction = direction;
         ApplyDirection(direction);
         _anchor = anchor;
@@ -79,6 +110,8 @@ public partial class OverlayWindow : Window
 
     public void ShowResult(TranslationResult result, TranslationDirection direction)
     {
+        _streaming = false;
+        _streamEpoch++;
         _direction = direction;
         ApplyDirection(direction);
         SetOriginalVisible(true);
@@ -103,12 +136,47 @@ public partial class OverlayWindow : Window
         RepositionAfterLayout();
     }
 
+    /// <summary>当前流式请求代次；结果落地后旧代次的增量会被丢弃。</summary>
+    public int CurrentStreamEpoch => _streamEpoch;
+
+    /// <summary>流式输出中：显示已经生成的部分，不显示复制/重试按钮。</summary>
+    public void ShowStreaming(string partial, TranslationDirection direction, int epoch)
+    {
+        // 拖动时 UI 线程被占住，增量会积压；翻译完成的回调可能先执行，
+        // 随后积压的旧增量就会把结果覆盖回“正在输出…”。这里按代次直接丢弃过期增量。
+        if (epoch != _streamEpoch) return;
+
+        _streaming = true;
+        _direction = direction;
+        ApplyDirection(direction);
+        SetOriginalVisible(true);
+        LoadingPanel.Visibility = Visibility.Collapsed;
+        ErrorPanel.Visibility = Visibility.Collapsed;
+        ErrorSettingsButton.Visibility = Visibility.Collapsed;
+        WarningPanel.Visibility = Visibility.Collapsed;
+        TranslationText.Text = partial;
+        TranslationText.Visibility = Visibility.Visible;
+        CopyButton.Visibility = Visibility.Collapsed;
+        RetryButton.Visibility = Visibility.Collapsed;
+        ErrorText.Text = string.Empty;
+        MetaText.Text = $"正在输出… {partial.Length:N0} 字符";
+        MetaText.ToolTip = null;
+
+        if (!IsVisible)
+        {
+            _anchor ??= ScreenGeometry.GetCursorPoint();
+            ShowPanel();
+        }
+    }
+
     public void ShowError(
         string message,
         string? code = null,
         bool showSettings = false,
         bool canRetry = true)
     {
+        _streaming = false;
+        _streamEpoch++;
         LoadingPanel.Visibility = Visibility.Collapsed;
         TranslationText.Visibility = Visibility.Collapsed;
         TranslationText.Text = string.Empty;
@@ -215,8 +283,21 @@ public partial class OverlayWindow : Window
     {
         if (e.ButtonState != MouseButtonState.Pressed) return;
 
+        var startLeft = Left;
+        var startTop = Top;
+        var wasPositioned = _userPositioned;
+
+        // 拖动会进入嵌套消息循环：翻译恰好完成时不能让浮层重定位，否则会从鼠标下跳走。
         _userPositioned = true;
+        _dragging = true;
+
+        // 关键：先停掉全局输入监听并让它标记为“已停止”。
+        // 按下鼠标时钩子已经排了一个事件到 UI 队列；等它执行时窗口已经跟着鼠标移开，
+        // 旧坐标会被判成“点在浮层外”，于是拖到一半浮层就消失了。
         StopDismissWatcher();
+
+        // 拖动时临时去掉投影：分层窗口每移动一像素都会重绘阴影，这是拖动卡顿的主因。
+        CardBorder.Effect = null;
 
         try
         {
@@ -226,8 +307,68 @@ public partial class OverlayWindow : Window
         {
             // 鼠标已经松开时 DragMove 会抛异常，忽略即可。
         }
+        finally
+        {
+            _dragging = false;
+            CardBorder.Effect = _cardShadow;
+        }
+
+        var moved = Math.Abs(Left - startLeft) > 0.5 || Math.Abs(Top - startTop) > 0.5;
+        if (moved)
+        {
+            // 真正拖动过：不再自动吸附回选区旁，也不再自动消失（只有点 × 关闭）。
+            e.Handled = true;
+            return;
+        }
+
+        // 只是点了一下标题栏，没移动：恢复原来的自动消失规则。
+        _userPositioned = wasPositioned;
+        if (!wasPositioned)
+        {
+            StartDismissWatcher();
+        }
 
         e.Handled = true;
+    }
+
+    private void ResizeThumb_DragStarted(object sender, DragStartedEventArgs e)
+    {
+        _resizing = true;
+        _dragging = true;
+
+        // 与拖动标题栏同理：让按下时已排队的全局事件失效，避免调宽时浮层被关掉。
+        StopDismissWatcher();
+
+        // 调宽时同样去掉投影，减少重绘卡顿。
+        CardBorder.Effect = null;
+    }
+
+    private void ResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        var draggingLeftEdge = ReferenceEquals(sender, LeftResizeThumb);
+        var delta = draggingLeftEdge ? -e.HorizontalChange : e.HorizontalChange;
+        var newWidth = Math.Clamp(Width + delta, MinWidthDip, MaxWidthDip);
+        var applied = newWidth - Width;
+        if (Math.Abs(applied) < 0.5) return;
+
+        // 拖左边时保持右边缘不动。
+        if (draggingLeftEdge) Left -= applied;
+        Width = newWidth;
+    }
+
+    private void ResizeThumb_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _resizing = false;
+        _dragging = false;
+        CardBorder.Effect = _cardShadow;
+
+        // 调宽不算“拖动过浮层”，自动消失规则保持不变。
+        if (!_userPositioned)
+        {
+            StartDismissWatcher();
+        }
+
+        WidthChanged?.Invoke(Width);
     }
 
     private void PositionNearAnchor(double estimatedHeight)
@@ -301,42 +442,96 @@ public partial class OverlayWindow : Window
             NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
     }
 
-    private void CopyButton_Click(object sender, RoutedEventArgs e)
+    private void ExplainWordButton_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = (OriginalText.SelectedText ?? string.Empty).Trim();
+        if (selected.Length == 0)
+        {
+            ShowWordDetailMessage("请先在原文中选中一个单词（双击选词或拖选），再点「详解」。");
+            return;
+        }
+
+        if (selected.Length > 60) selected = selected[..60];
+
+        WordTitle.Text = $"单词详解 · {selected}";
+        WordDetailText.Text = "正在查询…";
+        WordPanel.Visibility = Visibility.Visible;
+        ExplainRequested?.Invoke(selected, OriginalText.Text);
+    }
+
+    public void ShowWordDetail(string word, string detail)
+    {
+        WordTitle.Text = $"单词详解 · {word}";
+        WordDetailText.Text = detail;
+        WordPanel.Visibility = Visibility.Visible;
+    }
+
+    public void ShowWordDetailError(string word, string message)
+    {
+        WordTitle.Text = $"单词详解 · {word}";
+        WordDetailText.Text = message;
+        WordPanel.Visibility = Visibility.Visible;
+    }
+
+    private void ShowWordDetailMessage(string message)
+    {
+        WordTitle.Text = "单词详解";
+        WordDetailText.Text = message;
+        WordPanel.Visibility = Visibility.Visible;
+    }
+
+    private void WordCloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        WordPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private async void CopyOriginalSelection_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = OriginalText.SelectedText;
+        if (string.IsNullOrEmpty(selected)) return;
+
+        await ClipboardWriter.TrySetTextAsync(selected);
+    }
+
+    private void SelectAllOriginal_Click(object sender, RoutedEventArgs e)
+    {
+        OriginalText.Focus();
+        OriginalText.SelectAll();
+    }
+
+    private async void CopyButton_Click(object sender, RoutedEventArgs e)
     {
         var text = TranslationText.Text;
         if (string.IsNullOrWhiteSpace(text)) return;
 
+        // 写剪贴板放到后台 STA 线程：剪贴板被占用时 WPF 会在 UI 线程反复重试，
+        // 把消息循环（以及鼠标钩子）一起卡住，表现为“复制失败 + 鼠标乱跳”。
+        CopyButton.IsEnabled = false;
         try
         {
-            System.Windows.Clipboard.SetText(text);
-            CopyButton.Content = "已复制";
+            var ok = await ClipboardWriter.TrySetTextAsync(text);
+            CopyButton.Content = ok ? "已复制" : "复制失败";
             _copyResetTimer.Stop();
             _copyResetTimer.Start();
         }
-        catch (Exception ex)
+        finally
         {
-            Logger.Error("复制译文失败", ex);
-            CopyButton.Content = "复制失败";
+            CopyButton.IsEnabled = true;
         }
     }
 
     /// <summary>右键菜单：只复制用户选中的那一段译文。</summary>
-    private void CopySelectionMenu_Click(object sender, RoutedEventArgs e)
+    private async void CopySelectionMenu_Click(object sender, RoutedEventArgs e)
     {
         var selected = TranslationText.SelectedText;
         if (string.IsNullOrEmpty(selected)) return;
 
-        try
+        var ok = await ClipboardWriter.TrySetTextAsync(selected);
+        CopyButton.Content = ok ? "已复制选中" : "复制失败";
+        if (ok)
         {
-            System.Windows.Clipboard.SetText(selected);
-            CopyButton.Content = "已复制选中";
             _copyResetTimer.Stop();
             _copyResetTimer.Start();
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("复制选中译文失败", ex);
-            CopyButton.Content = "复制失败";
         }
     }
 
@@ -440,6 +635,9 @@ public partial class OverlayWindow : Window
 
     private void OnGlobalPointerPressed(int x, int y)
     {
+        // 拖动过程中不响应全局监听：排队的事件会按拖动后的窗口位置重新判断，
+        // 容易把“按在标题栏上”误判成“点在浮层外”，导致拖动时浮层消失。
+        if (_dragging) return;
         if (!IsVisible || IsWithinGracePeriod()) return;
 
         // 点浮层内部（复制、重试、关闭、拖动标题）不关闭。
@@ -451,6 +649,7 @@ public partial class OverlayWindow : Window
 
     private void OnGlobalWheelScrolled(int x, int y)
     {
+        if (_dragging) return;
         if (!IsVisible || IsWithinGracePeriod()) return;
 
         // 在浮层里滚动长译文时不关闭，滚别处才关闭。
@@ -462,6 +661,7 @@ public partial class OverlayWindow : Window
 
     private void OnGlobalKeyPressed(int virtualKey)
     {
+        if (_dragging) return;
         if (!IsVisible || IsWithinGracePeriod()) return;
 
         // 浮层处于激活状态（用户点了浮层、正在选中或复制译文）时，键盘输入不关闭浮层，

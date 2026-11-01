@@ -14,6 +14,7 @@ internal sealed class InputWatcher : IDisposable
     private readonly NativeMethods.LowLevelMouseProc _mouseProc;
     private readonly Dispatcher _dispatcher;
     private IntPtr _mouseHook;
+    private bool _running;
     private bool _disposed;
 
     public InputWatcher()
@@ -37,6 +38,7 @@ internal sealed class InputWatcher : IDisposable
     public bool Start()
     {
         if (_disposed) return false;
+        _running = true;
         if (_mouseHook != IntPtr.Zero) return true;
 
         _mouseHook = NativeMethods.SetWindowsHookEx(
@@ -61,6 +63,9 @@ internal sealed class InputWatcher : IDisposable
 
     public void Stop()
     {
+        // 先置为停止，已经排进 UI 队列的事件就不再生效（避免拖动时被旧事件关掉浮层）。
+        _running = false;
+
         if (_mouseHook != IntPtr.Zero)
         {
             NativeMethods.UnhookWindowsHookEx(_mouseHook);
@@ -109,7 +114,7 @@ internal sealed class InputWatcher : IDisposable
             DispatcherPriority.Background,
             new Action(() =>
             {
-                if (!_disposed) KeyPressed?.Invoke(virtualKey);
+                if (!_disposed && _running) KeyPressed?.Invoke(virtualKey);
             }));
     }
 
@@ -122,7 +127,7 @@ internal sealed class InputWatcher : IDisposable
             DispatcherPriority.Background,
             new Action(() =>
             {
-                if (!_disposed) handler.Invoke(x, y);
+                if (!_disposed && _running) handler.Invoke(x, y);
             }));
     }
 

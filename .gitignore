@@ -1,20 +1,17 @@
-# Build output
-bin/
-obj/
+# Build outputs
+**/bin/
+**/obj/
+
+# Local development tools (large)
+tools/dotnet8/
+
+# Self-contained release binaries (keep zips/source snapshots)
+releases/*/win-x64/
+
+# IDE
 .vs/
 *.user
-*.suo
 
-# Local toolchain and packaged releases (not part of the source repo)
-tools/
-releases/
-installer/Output/
-
-# Local runtime data
-secret.dat
-settings.json
-*.log
-
-# OS
-Thumbs.db
-.DS_Store
+# Signing secrets
+secrets/
+*.pfx

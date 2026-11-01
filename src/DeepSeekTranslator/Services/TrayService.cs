@@ -66,6 +66,9 @@ public sealed class TrayService : IDisposable
         var checkUpdate = new ToolStripMenuItem("检查更新…");
         checkUpdate.Click += (_, _) => UpdateCheckRequested?.Invoke();
 
+        var diagnostics = new ToolStripMenuItem("诊断…");
+        diagnostics.Click += (_, _) => DiagnosticsRequested?.Invoke();
+
         var exit = new ToolStripMenuItem("退出");
         exit.Click += (_, _) => ExitRequested?.Invoke();
 
@@ -82,6 +85,7 @@ public sealed class TrayService : IDisposable
         _menu.Items.Add(hotkeySettings);
         _menu.Items.Add(_autoStartItem);
         _menu.Items.Add(checkUpdate);
+        _menu.Items.Add(diagnostics);
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(exit);
 
@@ -108,6 +112,8 @@ public sealed class TrayService : IDisposable
     public event Action? HotkeySettingsRequested;
 
     public event Action? UpdateCheckRequested;
+
+    public event Action? DiagnosticsRequested;
 
     public event Action? ExitRequested;
 

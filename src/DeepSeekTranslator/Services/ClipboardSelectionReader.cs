@@ -19,11 +19,11 @@ public sealed record ClipboardReadResult(
 /// </summary>
 public sealed class ClipboardSelectionReader
 {
-    private const int MaxWaitMs = 1100;
-
-    public Task<ClipboardReadResult> TryCopySelectionAsync(CancellationToken cancellationToken)
+    public Task<ClipboardReadResult> TryCopySelectionAsync(
+        CancellationToken cancellationToken,
+        bool settleFocus = false)
     {
-        return RunStaAsync(() => TryCopySelection(cancellationToken));
+        return RunStaAsync(() => TryCopySelection(cancellationToken, settleFocus));
     }
 
     public Task<string?> ReadClipboardTextAsync(CancellationToken cancellationToken)
@@ -42,7 +42,9 @@ public sealed class ClipboardSelectionReader
         });
     }
 
-    private static ClipboardReadResult TryCopySelection(CancellationToken cancellationToken)
+    private static ClipboardReadResult TryCopySelection(
+        CancellationToken cancellationToken,
+        bool settleFocus)
     {
         IDataObject? snapshot = null;
         var hadSnapshot = false;
@@ -72,13 +74,29 @@ public sealed class ClipboardSelectionReader
                     "等待快捷键释放超时");
             }
 
+            // 浏览器/PDF 会在选区旁弹出自己的小菜单；点我们的图标后它需要一点时间关闭、
+            // 把焦点还给文档，太早发 Ctrl+C 会被吞掉（表现为“剪贴板没有变化”）。
+            if (settleFocus)
+            {
+                Thread.Sleep(250);
+            }
+
             var sequence = NativeMethods.GetClipboardSequenceNumber();
             if (!SendCopyShortcut(insert: false))
             {
                 return new ClipboardReadResult(null, false, false, "SendInput Ctrl+C 失败");
             }
 
-            var changed = WaitForSequenceChange(sequence, MaxWaitMs, cancellationToken);
+            var changed = WaitForSequenceChange(sequence, 700, cancellationToken);
+            if (!changed)
+            {
+                // 第一次 Ctrl+C 可能落在浏览器的选区菜单上，重试一次。
+                if (SendCopyShortcut(insert: false))
+                {
+                    changed = WaitForSequenceChange(sequence, 900, cancellationToken);
+                }
+            }
+
             if (!changed)
             {
                 // 少数旧程序只响应 Ctrl+Insert。

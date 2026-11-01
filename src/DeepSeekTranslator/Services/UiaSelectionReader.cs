@@ -15,6 +15,30 @@ public sealed class UiaSelectionReader
 {
     private static readonly TimeSpan DefaultReadTimeout = TimeSpan.FromMilliseconds(2600);
 
+    /// <summary>
+    /// 预热浏览器的 UIA 树：Chromium 的 accessibility 是按需构建的，第一次查询可能要 1~3 秒。
+    /// 在鼠标按下时后台查一次，松手后的探测就能更快命中，划词图标不会时有时无。
+    /// </summary>
+    public void WarmUp(IntPtr foregroundWindow)
+    {
+        if (foregroundWindow == IntPtr.Zero) return;
+
+        try
+        {
+            var root = AutomationElement.FromHandle(foregroundWindow);
+            if (root is null) return;
+
+            var condition = new PropertyCondition(
+                AutomationElement.IsTextPatternAvailableProperty,
+                true);
+            root.FindFirst(TreeScope.Descendants, condition);
+        }
+        catch
+        {
+            // 预热失败不影响正常流程。
+        }
+    }
+
     /// <param name="timeout">UIA 探测超时；划词图标使用更短的超时。</param>
     /// <param name="maxDescendants">最多遍历多少个可文本节点（0 表示只看焦点元素和根节点）。</param>
     public async Task<UiaReadResult?> TryReadAsync(

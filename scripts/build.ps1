@@ -19,17 +19,26 @@ if ($Publish) {
     $output = Join-Path $root "releases\v$version\win-x64"
     if (Test-Path $output) { Remove-Item -Recurse -Force $output }
 
+    # 某些机器/安全软件会拒绝 dotnet publish 直接在 releases 下建目录（PowerShell 写同一目录却正常），
+    # 所以先发布到工作区临时目录，再用 PowerShell 复制到 releases。
+    $staging = Join-Path $root ".publish-temp"
+    if (Test-Path $staging) { Remove-Item -Recurse -Force $staging }
+
     & $dotnet publish $project `
         -c $Configuration `
         -r win-x64 `
         --self-contained true `
         -p:PublishSingleFile=false `
         -p:DebugType=None `
-        -o $output
+        -o $staging
 
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet publish failed: $LASTEXITCODE"
     }
+
+    New-Item -ItemType Directory -Path $output -Force | Out-Null
+    Copy-Item (Join-Path $staging "*") $output -Recurse -Force
+    Remove-Item -Recurse -Force $staging
 
     Copy-Item (Join-Path $root "README.md") (Join-Path $output "README.md") -Force
     $docsSource = Join-Path $root "docs"
@@ -44,7 +53,7 @@ if ($Publish) {
 
     $sourceStage = Join-Path (Split-Path $output -Parent) "_source-stage"
     if (Test-Path $sourceStage) { Remove-Item -Recurse -Force $sourceStage }
-    robocopy $root $sourceStage /E /XD releases tools bin obj .vs /XF *.user | Out-Null
+    robocopy $root $sourceStage /E /XD releases tools bin obj .vs .publish-temp .build-temp github-export .acl-repair /XF *.user notes-*.txt settings-*.png | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy source packaging failed: $LASTEXITCODE" }
 
     $sourceZip = Join-Path (Split-Path $output -Parent) "DeepSeekTranslator-$version-source.zip"

@@ -27,6 +27,10 @@ Check(!symbols.IsValid && symbols.ErrorCode == "NO_TRANSLATABLE_TEXT", "纯符�
 var okText = TextValidator.Validate("Hello DeepSeek");
 Check(okText.IsValid && okText.NormalizedText == "Hello DeepSeek", "正常文本通过");
 
+Check(MathText.Normalize(@"\(\boldsymbol{\Gamma}_{11}\)") == "Γ₁₁", "LaTeX 数学符号正常化");
+Check(MathText.Normalize("The cost is $5.") == "The cost is $5.", "普通 $ 不被误删");
+Check(MathText.Normalize(@"$f \times g \approx h$") == "f × g ≈ h", "LaTeX 运算符正常化");
+
 var zhDetection = LanguageDetector.Detect("你好，世界。");
 Check(zhDetection.Direction == TranslationDirection.ChineseToEnglish, "中文 → 英文方向检测");
 var enDetection = LanguageDetector.Detect("Hello world, this is English.");
@@ -139,6 +143,103 @@ using (var client = new DeepSeekClient(new StubHandler(async request =>
         .GetProperty("content").GetString() ?? "";
     Check(enUserContent.Contains("\"target_language\":\"Chinese\""), "请求目标语言为中文");
     Check(enUserContent.Contains("\"source_language\":\"English\""), "请求源语言为英文");
+}
+
+using (var client = new DeepSeekClient(new StubHandler(_ =>
+{
+    var sse = string.Join("\n", new[]
+    {
+        "data: {\"model\":\"deepseek-flash\",\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}",
+        "",
+        "data: {\"choices\":[{\"delta\":{\"content\":\", world.\"}}]}",
+        "",
+        "data: [DONE]",
+        ""
+    });
+
+    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new StringContent(sse, Encoding.UTF8, "text/event-stream")
+    });
+})))
+{
+    var partials = new List<string>();
+    var streamResult = await client.TranslateStreamAsync(
+        "你好，世界。",
+        "sk-test-key",
+        "deepseek-flash",
+        zhDetection,
+        null,
+        partial => partials.Add(partial),
+        CancellationToken.None);
+
+    Check(streamResult.Translation == "Hello, world.", "流式响应拼接");
+    Check(partials.Count >= 1 && partials[^1] == "Hello, world.", "流式增量回调");
+}
+
+string? capturedGlossaryBody = null;
+using (var client = new DeepSeekClient(new StubHandler(async request =>
+{
+    capturedGlossaryBody = request.Content is null
+        ? null
+        : await request.Content.ReadAsStringAsync();
+    return JsonResponse(HttpStatusCode.OK, """
+        {
+          "id": "chatcmpl-glossary",
+          "model": "deepseek-flash",
+          "choices": [
+            { "index": 0, "finish_reason": "stop", "message": { "role": "assistant", "content": "LMBA test" } }
+          ]
+        }
+        """);
+})))
+{
+    await client.TranslateAsync(
+        "LMBA 测试",
+        "sk-test-key",
+        "deepseek-flash",
+        zhDetection,
+        CancellationToken.None,
+        "Terminology:\n- \"LMBA\" -> \"LMBA\"\n- \"PA\" -> \"功率放大器\"");
+
+    using var glossaryBody = JsonDocument.Parse(capturedGlossaryBody ?? "{}");
+    var systemContent = glossaryBody.RootElement.GetProperty("messages")[0]
+        .GetProperty("content").GetString() ?? "";
+    Check(systemContent.Contains("LMBA") && systemContent.Contains("功率放大器"), "术语表注入 system prompt");
+}
+
+string? capturedWordBody = null;
+using (var client = new DeepSeekClient(new StubHandler(async request =>
+{
+    capturedWordBody = request.Content is null
+        ? null
+        : await request.Content.ReadAsStringAsync();
+    return JsonResponse(HttpStatusCode.OK, """
+        {
+          "id": "chatcmpl-word",
+          "model": "deepseek-flash",
+          "choices": [
+            { "index": 0, "finish_reason": "stop", "message": { "role": "assistant", "content": "音标：/ˈɑːtɪkl/\n词性：n. / v." } }
+          ],
+          "usage": { "total_tokens": 120 }
+        }
+        """);
+})))
+{
+    var wordResult = await client.ExplainWordAsync(
+        "article",
+        "In this article",
+        "sk-test-key",
+        "deepseek-flash",
+        CancellationToken.None);
+
+    Check(wordResult.Translation.Contains("音标"), "单词详解返回内容");
+    using var wordBody = JsonDocument.Parse(capturedWordBody ?? "{}");
+    var wordUser = wordBody.RootElement.GetProperty("messages")[1]
+        .GetProperty("content").GetString() ?? "";
+    Check(
+        wordUser.Contains("article") && wordUser.Contains("In this article"),
+        "单词详解携带单词与上下文");
 }
 
 using (var client = new DeepSeekClient(new StubHandler(_ =>

@@ -1,5 +1,10 @@
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using DeepSeekTranslator.Interop;
 using DeepSeekTranslator.Models;
 using DeepSeekTranslator.Views;
@@ -13,6 +18,7 @@ public sealed class AppController : IDisposable
     private readonly SecretStore _secretStore = new();
     private readonly DeepSeekClient _deepSeek = new();
     private readonly CaptureCoordinator _capture = new();
+    private readonly TranslationCache _cache = new();
     private readonly OcrService _ocr = new();
     private readonly UiaSelectionReader _selectionReader = new();
     private readonly UpdateService _updates = new();
@@ -23,11 +29,13 @@ public sealed class AppController : IDisposable
     private HotkeyService? _hotkeys;
     private OverlayWindow? _overlay;
     private SettingsWindow? _settingsWindow;
+    private DiagnosticsWindow? _diagnosticsWindow;
     private UpdateWindow? _updateWindow;
     private SelectionMonitor? _selectionMonitor;
     private SelectionToolbarWindow? _selectionToolbar;
     private PixelRect _toolbarRect;
     private int _selectionProbeVersion;
+    private long _lastAccessibilityWarmUpTicks;
     private string? _lastTranslation;
     private string? _currentText;
     private PixelRect? _currentAnchor;
@@ -66,6 +74,7 @@ public sealed class AppController : IDisposable
         _tray.AutoStartChanged += ToggleAutoStart;
         _tray.GameModeChanged += ToggleGameMode;
         _tray.UpdateCheckRequested += () => RunGuarded(() => CheckForUpdatesAsync(silent: false));
+        _tray.DiagnosticsRequested += OpenDiagnostics;
         _tray.ExitRequested += Exit;
         _tray.SetAutoStartChecked(_settings.AutoStart);
         _tray.SetGameMode(_settings.GameMode);
@@ -289,7 +298,7 @@ public sealed class AppController : IDisposable
         {
             if (!string.IsNullOrWhiteSpace(validation.NormalizedText))
             {
-                ShowLoading(validation.NormalizedText, anchor, detection.Direction);
+                ShowLoading(MathText.Normalize(validation.NormalizedText), anchor, detection.Direction);
             }
             else
             {
@@ -308,7 +317,7 @@ public sealed class AppController : IDisposable
         _currentText = validation.NormalizedText;
         _currentAnchor = anchor;
         _currentWasFullscreen = ScreenGeometry.IsForegroundFullscreen();
-        ShowLoading(validation.NormalizedText, anchor, detection.Direction);
+        ShowLoading(MathText.Normalize(validation.NormalizedText), anchor, detection.Direction);
 
         var key = _secretStore.Load();
         if (string.IsNullOrWhiteSpace(key))
@@ -321,32 +330,59 @@ public sealed class AppController : IDisposable
             return;
         }
 
+        var glossaryEntries = Glossary.Parse(_settings.Glossary);
+        var glossaryPrompt = Glossary.BuildPrompt(glossaryEntries);
+        var cacheKey = TranslationCache.BuildKey(
+            validation.NormalizedText,
+            detection,
+            _settings.Model,
+            Glossary.Fingerprint(glossaryEntries));
+
+        if (_settings.EnableCache && _cache.TryGet(cacheKey, out var cached))
+        {
+            Logger.Info("translate: cache hit");
+            _lastTranslation = cached.Translation;
+            _overlay?.ShowResult(cached, detection.Direction);
+            return;
+        }
+
         try
         {
-            var result = await _deepSeek.TranslateAsync(
-                validation.NormalizedText,
-                key,
-                _settings.Model,
-                detection,
-                _lifetime.Token);
+            var result = _settings.EnableStreaming
+                ? await TranslateStreamingAsync(validation.NormalizedText, key, detection, glossaryPrompt, anchor)
+                : await _deepSeek.TranslateAsync(
+                    validation.NormalizedText,
+                    key,
+                    _settings.Model,
+                    detection,
+                    _lifetime.Token,
+                    glossaryPrompt);
+
+            // LaTeX 公式转成可读的 Unicode（Γ₁₁ 这类），避免译文里出现 \boldsymbol 等命令。
+            result = result with { Translation = MathText.Normalize(result.Translation) };
 
             _lastTranslation = result.Translation;
             _overlay?.ShowResult(result, detection.Direction);
 
+            if (_settings.EnableCache)
+            {
+                _cache.Set(cacheKey, result);
+            }
+
             // 独占全屏可能遮挡置顶窗；把译文放到剪贴板作为兜底。
             if (_currentWasFullscreen)
             {
-                try
+                var copied = await ClipboardWriter.TrySetTextAsync(result.Translation);
+                if (copied)
                 {
-                    System.Windows.Clipboard.SetText(result.Translation);
                     _tray?.ShowBalloon(
                         "全屏模式提示",
                         "浮层可能被全屏应用遮挡，译文已复制到剪贴板。",
                         ToolTipIcon.Info);
                 }
-                catch (Exception ex)
+                else
                 {
-                    Logger.Error("全屏模式复制译文失败", ex);
+                    Logger.Error("全屏模式复制译文失败（剪贴板被占用）");
                 }
             }
         }
@@ -370,6 +406,71 @@ public sealed class AppController : IDisposable
             // Key 字符串不保留在控制器字段中。
             key = null;
         }
+    }
+
+    /// <summary>
+    /// 流式翻译；如果流式通道不可用（网络中断、SSE 解析失败等），自动回退为整段请求。
+    /// </summary>
+    private async Task<TranslationResult> TranslateStreamingAsync(
+        string text,
+        string apiKey,
+        LanguageDetection detection,
+        string glossaryPrompt,
+        PixelRect? anchor)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        var overlay = _overlay;
+        var streamEpoch = overlay?.CurrentStreamEpoch ?? 0;
+        var lastTick = 0L;
+
+        try
+        {
+            return await _deepSeek.TranslateStreamAsync(
+                text,
+                apiKey,
+                _settings.Model,
+                detection,
+                glossaryPrompt,
+                partial =>
+                {
+                    var now = Environment.TickCount64;
+                    if (now - lastTick < 90) return;
+                    lastTick = now;
+
+                    dispatcher?.BeginInvoke(DispatcherPriority.Render, new Action(() =>
+                    {
+                        if (overlay is { IsVisible: true })
+                        {
+                            overlay.ShowStreaming(
+                                MathText.Normalize(partial),
+                                detection.Direction,
+                                streamEpoch);
+                        }
+                    }));
+                },
+                _lifetime.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (DeepSeekException ex) when (ex.Code is "NETWORK_ERROR" or "BAD_RESPONSE" or "TIMEOUT")
+        {
+            Logger.Error($"流式翻译失败（{ex.Code}），回退为整段请求");
+        }
+        catch (Exception ex) when (ex is not DeepSeekException)
+        {
+            Logger.Error("流式翻译异常，回退为整段请求", ex);
+        }
+
+        ShowLoading(text, anchor, detection.Direction);
+        return await _deepSeek.TranslateAsync(
+            text,
+            apiKey,
+            _settings.Model,
+            detection,
+            _lifetime.Token,
+            glossaryPrompt);
     }
 
     private void ShowCaptureError(CaptureException ex)
@@ -405,7 +506,22 @@ public sealed class AppController : IDisposable
     {
         if (_overlay is not null) return;
 
-        _overlay = new OverlayWindow();
+        _overlay = new OverlayWindow
+        {
+            PreferredWidth = _settings.OverlayWidth > 0 ? _settings.OverlayWidth : 440
+        };
+        _overlay.WidthChanged += width =>
+        {
+            _settings.OverlayWidth = width;
+            try
+            {
+                _settingsStore.Save(_settings);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("保存浮层宽度失败", ex);
+            }
+        };
         _overlay.RetryRequested += () =>
         {
             var action = _retryAction;
@@ -415,9 +531,54 @@ public sealed class AppController : IDisposable
             }
         };
         _overlay.SettingsRequested += OpenSettings;
+        _overlay.ExplainRequested += (word, context) => RunGuarded(() => ExplainWordAsync(word, context));
+    }
+
+    /// <summary>单词详解：音标、词性、释义、搭配和本句含义。</summary>
+    private async Task ExplainWordAsync(string word, string? context)
+    {
+        var key = _secretStore.Load();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            _overlay?.ShowWordDetailError(word, "尚未配置 API Key。请打开设置填入 Key 后再试。");
+            return;
+        }
+
+        try
+        {
+            var result = await _deepSeek.ExplainWordAsync(
+                word,
+                context,
+                key,
+                _settings.Model,
+                _lifetime.Token);
+            _overlay?.ShowWordDetail(word, result.Translation);
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+        {
+            // 程序退出中。
+        }
+        catch (DeepSeekException ex)
+        {
+            _overlay?.ShowWordDetailError(word, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("单词详解失败", ex);
+            _overlay?.ShowWordDetailError(word, "查询失败，请重试。");
+        }
+        finally
+        {
+            key = null;
+        }
     }
 
     private void CopyLastTranslation()
+    {
+        _ = CopyLastTranslationAsync();
+    }
+
+    private async Task CopyLastTranslationAsync()
     {
         if (string.IsNullOrWhiteSpace(_lastTranslation))
         {
@@ -425,16 +586,11 @@ public sealed class AppController : IDisposable
             return;
         }
 
-        try
-        {
-            System.Windows.Clipboard.SetText(_lastTranslation);
-            _tray?.ShowBalloon("已复制", "最近一条译文已复制到剪贴板。", ToolTipIcon.Info);
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("复制最近译文失败", ex);
-            _tray?.ShowBalloon("复制失败", "剪贴板暂时不可用，请稍后重试。", ToolTipIcon.Warning);
-        }
+        var ok = await ClipboardWriter.TrySetTextAsync(_lastTranslation);
+        _tray?.ShowBalloon(
+            ok ? "已复制" : "复制失败",
+            ok ? "最近一条译文已复制到剪贴板。" : "剪贴板暂时被其他程序占用，请稍后重试。",
+            ok ? ToolTipIcon.Info : ToolTipIcon.Warning);
     }
 
     public void ShowSettings()
@@ -536,6 +692,166 @@ public sealed class AppController : IDisposable
     {
         OpenSettings();
         _settingsWindow?.FocusHotkeySettings();
+    }
+
+    private void OpenDiagnostics()
+    {
+        if (_diagnosticsWindow is not null)
+        {
+            if (_diagnosticsWindow.IsVisible)
+            {
+                _diagnosticsWindow.Activate();
+                return;
+            }
+
+            _diagnosticsWindow = null;
+        }
+
+        _diagnosticsWindow = new DiagnosticsWindow(
+            BuildDiagnosticsReport,
+            TestCaptureAsync,
+            OpenLogDirectory,
+            ClearTranslationCache);
+        _diagnosticsWindow.Closed += (_, _) => _diagnosticsWindow = null;
+        _diagnosticsWindow.Show();
+        _diagnosticsWindow.Activate();
+    }
+
+    private string BuildDiagnosticsReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"DeepSeek 划词翻译 {AppInfo.Version}");
+        builder.AppendLine($"时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        builder.AppendLine($"系统：{RuntimeInformation.OSDescription} / {RuntimeInformation.ProcessArchitecture}");
+        builder.AppendLine($"运行时：.NET {Environment.Version}");
+        builder.AppendLine(
+            $"进程：{Environment.ProcessId}，管理员：{(ElevationHelper.IsCurrentProcessElevated() ? "是" : "否")}");
+        builder.AppendLine($"数据目录：{AppPaths.DataDirectory}");
+        builder.AppendLine(
+            $"设置文件：{AppPaths.SettingsFile}（{(File.Exists(AppPaths.SettingsFile) ? "存在" : "缺失")}）");
+        builder.AppendLine($"API Key：{(_secretStore.HasSecret() ? _secretStore.MaskedKey() : "未配置")}");
+        builder.AppendLine($"模型：{_settings.Model}");
+        builder.AppendLine($"浮层宽度：{_settings.OverlayWidth:0} DIP");
+        builder.AppendLine(
+            $"翻译缓存：{_cache.Count} 条（{(_settings.EnableCache ? "启用" : "关闭")}）");
+        builder.AppendLine($"流式输出：{(_settings.EnableStreaming ? "启用" : "关闭")}");
+        builder.AppendLine($"术语表：{Glossary.Parse(_settings.Glossary).Count} 条");
+        builder.AppendLine($"游戏模式：{(_settings.GameMode ? "开" : "关")}");
+        builder.AppendLine();
+
+        builder.AppendLine("快捷键：");
+        AppendHotkeyLine(builder, "翻译当前选区", _settings.TranslateSelectionHotkey);
+        AppendHotkeyLine(builder, "翻译剪贴板", _settings.TranslateClipboardHotkey);
+        AppendHotkeyLine(builder, "截图 OCR", _settings.OcrHotkey);
+        AppendHotkeyLine(builder, "复制最近译文", _settings.CopyLastHotkey);
+        if (_hotkeys?.FailedHotkeys is { Count: > 0 } failures)
+        {
+            builder.AppendLine($"  注册失败：{string.Join("；", failures)}");
+        }
+
+        builder.AppendLine();
+
+        var hwnd = NativeMethods.GetForegroundWindow();
+        NativeMethods.GetWindowThreadProcessId(hwnd, out var foregroundPid);
+        var foregroundName = foregroundPid == 0
+            ? "未知"
+            : ElevationHelper.GetProcessName(foregroundPid);
+        var foregroundElevated = foregroundPid != 0 &&
+                                 ElevationHelper.IsProcessElevated(foregroundPid);
+        builder.AppendLine($"前台窗口：{foregroundName}{(foregroundElevated ? "（管理员）" : "")}");
+        builder.AppendLine($"剪贴板：{DescribeClipboard()}");
+        builder.AppendLine(
+            $"OCR 语言：{(OcrService.GetAvailableLanguages() is { Count: > 0 } languages ? string.Join(", ", languages) : "未安装")}");
+        builder.AppendLine();
+
+        builder.AppendLine("最近日志：");
+        foreach (var line in ReadLogTail(12))
+        {
+            builder.AppendLine("  " + line);
+        }
+
+        return builder.ToString();
+    }
+
+    private void AppendHotkeyLine(StringBuilder builder, string label, string hotkey)
+    {
+        var failed = _hotkeys?.FailedHotkeys
+            .Any(item => item.StartsWith(label, StringComparison.Ordinal)) == true;
+        builder.AppendLine($"  {label}：{hotkey}{(failed ? "（注册失败）" : "")}");
+    }
+
+    private static string DescribeClipboard()
+    {
+        try
+        {
+            if (!System.Windows.Clipboard.ContainsText())
+            {
+                return "没有文本";
+            }
+
+            return $"有文本（{System.Windows.Clipboard.GetText().Length} 字符）";
+        }
+        catch (Exception ex)
+        {
+            return $"读取失败（{ex.GetType().Name}）";
+        }
+    }
+
+    private static IReadOnlyList<string> ReadLogTail(int count)
+    {
+        try
+        {
+            var path = Path.Combine(AppPaths.LogDirectory, "app.log");
+            if (!File.Exists(path)) return Array.Empty<string>();
+            return File.ReadLines(path).TakeLast(count).ToArray();
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    private static void OpenLogDirectory()
+    {
+        AppPaths.EnsureDirectories();
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = $"\"{AppPaths.LogDirectory}\"",
+            UseShellExecute = true
+        });
+    }
+
+    private void ClearTranslationCache()
+    {
+        _cache.Clear();
+        Logger.Info("translate: cache cleared");
+    }
+
+    private async Task<(bool Ok, string Message)> TestCaptureAsync()
+    {
+        try
+        {
+            var capture = await _capture
+                .CaptureSelectionAsync(_lifetime.Token)
+                .WaitAsync(TimeSpan.FromSeconds(15), _lifetime.Token);
+
+            return (true,
+                $"取词成功：{capture.AppName} / {capture.Method} / {capture.Text.Length} 字符。");
+        }
+        catch (CaptureException ex)
+        {
+            return (false, $"取词失败：{ex.Message}");
+        }
+        catch (TimeoutException)
+        {
+            return (false, "取词超时（15 秒），请重试。");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("诊断取词失败", ex);
+            return (false, $"取词异常：{ex.Message}");
+        }
     }
 
     private void ToggleAutoStart(bool enabled)
@@ -641,12 +957,36 @@ public sealed class AppController : IDisposable
 
     private void OnGlobalPointerDown(PixelRect point)
     {
+        WarmUpForegroundAccessibility();
+
         if (_selectionToolbar is null || !_selectionToolbar.IsShown) return;
 
         if (!_toolbarRect.Contains(point.CenterX, point.CenterY))
         {
             HideSelectionToolbar();
         }
+    }
+
+    /// <summary>
+    /// 浏览器（尤其 Edge PDF）的 UIA 树是按需构建的，第一次查询要 1~3 秒。
+    /// 鼠标按下时先在后台预热一次，松手后的探测就能及时命中。
+    /// </summary>
+    private void WarmUpForegroundAccessibility()
+    {
+        if (_settings.GameMode || !_settings.ShowSelectionIcon) return;
+        if (Environment.TickCount64 - _lastAccessibilityWarmUpTicks < 1500) return;
+
+        var hwnd = NativeMethods.GetForegroundWindow();
+        if (hwnd == IntPtr.Zero) return;
+
+        NativeMethods.GetWindowThreadProcessId(hwnd, out var processId);
+        if (processId == 0 || processId == (uint)Environment.ProcessId) return;
+
+        var appName = ElevationHelper.GetProcessName(processId);
+        if (!AppCompatibility.IsBrowser(appName)) return;
+
+        _lastAccessibilityWarmUpTicks = Environment.TickCount64;
+        _ = Task.Run(() => _selectionReader.WarmUp(hwnd));
     }
 
     private void OnSelectionDragCompleted(PixelRect point)
@@ -690,16 +1030,16 @@ public sealed class AppController : IDisposable
             }
 
             // 浏览器：Chromium 的 UIA 树首次查询要 1~2 秒，图标经常来不及出现。
-            // 拖选文字后鼠标仍是 I 型光标，用它即时判断；拖动链接/图片/标签页则是手型或箭头。
-            if (allowClipboardOnly &&
-                AppCompatibility.IsBrowser(appName) &&
+            // 拖选/双击选词后鼠标仍是 I 型光标，用它即时判断；拖动链接/图片/标签页则是手型或箭头。
+            if (AppCompatibility.IsBrowser(appName) &&
                 ScreenGeometry.IsTextCursor())
             {
                 ShowSelectionToolbar(point);
                 return;
             }
 
-            var timeout = TimeSpan.FromMilliseconds(1200);
+            var timeout = TimeSpan.FromMilliseconds(
+                AppCompatibility.IsBrowser(appName) ? 2600 : 1200);
             var result = await _selectionReader.TryReadFromPointAsync(
                 point.CenterX,
                 point.CenterY,
@@ -917,6 +1257,8 @@ public sealed class AppController : IDisposable
         try
         {
             _settingsWindow?.Close();
+            _diagnosticsWindow?.Close();
+            _diagnosticsWindow = null;
             _overlay?.ForceClose();
         }
         catch
@@ -935,6 +1277,7 @@ public sealed class AppController : IDisposable
         }
 
         _deepSeek.Dispose();
+        _cache.Dispose();
         _lifetime.Dispose();
     }
 }
