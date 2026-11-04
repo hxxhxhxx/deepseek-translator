@@ -1020,19 +1020,25 @@ public sealed class AppController : IDisposable
 
     private void OnSelectionDragCompleted(PixelRect point)
     {
-        _ = ProbeSelectionAsync(point, allowClipboardOnly: true);
+        _ = ProbeSelectionAsync(
+            point,
+            allowClipboardOnly: true,
+            startedOnText: _selectionMonitor?.LastPointerDownWasTextCursor ?? false);
     }
 
     private void OnSelectionDoubleClicked(PixelRect point)
     {
-        _ = ProbeSelectionAsync(point, allowClipboardOnly: false);
+        _ = ProbeSelectionAsync(point, allowClipboardOnly: false, startedOnText: false);
     }
 
     /// <summary>
     /// 鼠标拖选 / 双击选词后判断是否存在文本选区，决定是否显示「译」图标。
     /// 浏览器（Edge/Chrome）里焦点元素常常只是 Pane，所以优先用鼠标坐标命中文本节点。
     /// </summary>
-    private async Task ProbeSelectionAsync(PixelRect point, bool allowClipboardOnly)
+    private async Task ProbeSelectionAsync(
+        PixelRect point,
+        bool allowClipboardOnly,
+        bool startedOnText = false)
     {
         var version = ++_selectionProbeVersion;
 
@@ -1063,8 +1069,9 @@ public sealed class AppController : IDisposable
 
             // 浏览器：Chromium 的 UIA 树首次查询要 1~2 秒，图标经常来不及出现。
             // 拖选/双击选词后鼠标仍是 I 型光标，用它即时判断；拖动链接/图片/标签页则是手型或箭头。
+            // 再加“按下时在文字上”的补充：从前往后拖选时松手可能落在行尾空白。
             if (AppCompatibility.IsBrowser(appName) &&
-                ScreenGeometry.IsTextCursor())
+                (ScreenGeometry.IsTextCursor() || startedOnText))
             {
                 ShowSelectionToolbar(point);
                 return;

@@ -43,7 +43,11 @@ public static class AppCompatibility
         "小绿鲸英文文献阅读器",
         "xljsci",
         "xiaolvjing",
-        "xlj"
+        "xlj",
+
+        // Steam：主进程 / 游戏内覆盖层（网页区由 steamwebhelper 渲染）
+        "steam",
+        "gameoverlayui"
     };
 
     private static readonly string[] BrowserApps =
@@ -58,7 +62,8 @@ public static class AppCompatibility
         "360chrome",
         "QQBrowser",
         "SogouExplorer",
-        "iexplore"
+        "iexplore",
+        "steamwebhelper"
     };
 
     /// <summary>

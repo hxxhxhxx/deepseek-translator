@@ -54,6 +54,9 @@ Check(
 Check(
     AppCompatibility.Describe("wps", null, "").StartsWith("clipboard/process"),
     "诊断规则描述");
+Check(AppCompatibility.IsBrowser("steamwebhelper"), "Steam 网页走浏览器模式");
+Check(AppCompatibility.IsClipboardOnly("steam"), "Steam 主进程走剪贴板");
+Check(AppCompatibility.IsClipboardOnly("gameoverlayui"), "Steam 游戏内覆盖层走剪贴板");
 var enDetection = LanguageDetector.Detect("Hello world, this is English.");
 Check(enDetection.Direction == TranslationDirection.EnglishToChinese, "英文 → 中文方向检测");
 var mixedZh = LanguageDetector.Detect("使用 OpenAI API 调用 GPT-4 模型");

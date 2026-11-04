@@ -24,6 +24,13 @@ public sealed class SelectionMonitor : IDisposable
     private int _lastClickY;
     private bool _disposed;
 
+    /// <summary>
+    /// 本次左键按下时鼠标是否处于 I 型文本光标。
+    /// 浏览器/CEF 里从前往后拖选时，松开点常落在行尾空白（箭头），
+    /// 用按下点作为补充判断，避免只有反向拖选才出「译」。
+    /// </summary>
+    public bool LastPointerDownWasTextCursor { get; private set; }
+
     public SelectionMonitor()
     {
         _proc = Callback;
@@ -117,10 +124,12 @@ public sealed class SelectionMonitor : IDisposable
                     _downY = info.pt.Y;
                     _downTicks = Environment.TickCount64;
                     _tracking = true;
+                    LastPointerDownWasTextCursor = ScreenGeometry.IsTextCursor();
                 }
                 else
                 {
                     _tracking = false;
+                    LastPointerDownWasTextCursor = false;
                 }
 
                 Raise(PointerDown, point);
