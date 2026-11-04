@@ -36,7 +36,7 @@ All application data stays under `%LOCALAPPDATA%\DeepSeekTranslator`:
 | `settings.json` | model, hotkeys, overlay size/font, glossary, compatibility list | no API key |
 | `secret.dat` | API key encrypted with Windows DPAPI | current Windows user only |
 | `translation-cache.json` | up to 200 translations, max 30 days: translated text, model, timestamps; the source text is stored only as a SHA-256 key | clearable in Diagnostics |
-| `logs\app.log` | local run log: app name, error codes, character counts | no selected text |
+| `logs\app.log` | local run log: app name, error codes, character counts; may include the foreground window title/path for troubleshooting | no selected text; local only |
 | `translation-cache` / glossary | user content | removable with the folder |
 
 Screenshots used by OCR are processed in memory by the built-in Windows OCR engine. They are never written to disk or uploaded; only the recognized text may be sent for translation if the user asks for it.
@@ -98,7 +98,7 @@ DeepSeek 对 API 请求的处理受其隐私政策约束：
 | `settings.json` | 模型、快捷键、浮层尺寸/字号、术语表、兼容列表 | 不含 API Key |
 | `secret.dat` | 用 Windows DPAPI 加密的 API Key | 仅当前 Windows 用户可解密 |
 | `translation-cache.json` | 最多 200 条、30 天内的译文、模型、时间；原文只以 SHA-256 键形式存在 | 可在诊断面板清除 |
-| `logs\app.log` | 本地运行日志：应用名、错误码、字符数 | 不含选中文本 |
+| `logs\app.log` | 本地运行日志：应用名、错误码、字符数；排障时可能包含前台窗口标题/路径 | 不含选中文本，仅本地 |
 
 OCR 用的截图仅在内存中由 Windows OCR 处理，不落盘、不上传；只有识别出的文字在用户要求翻译时才可能发送。
 
