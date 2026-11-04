@@ -67,7 +67,7 @@ powershell -File scripts/test.ps1
 
 - Gitee：主发布源，`latest.json` 自动更新；
 - GitHub：代码镜像（本仓库）；
-- winget：清单在 `packaging/winget`，PR #467817 审核中；
+- winget：清单在 `packaging/winget`，PR #470707 审核中；
 - Microsoft Store：MSIX 模板与图标见 `packaging/msix`；
 - 详细分发/签名步骤见 [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)。
 

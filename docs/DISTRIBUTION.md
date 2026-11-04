@@ -6,7 +6,7 @@
 | --- | --- |
 | Gitee Releases + `latest.json` 自动更新 | 已上线，1.7.1 |
 | GitHub 镜像 | 已同步 1.7.1（commit `de2a666`），Release v1.7.1 已上传安装包 |
-| winget | PR [#467817](https://github.com/microsoft/winget-pkgs/pull/467817) 已提交；CLA 已签，10/10 自动校验通过，等待人工审核 |
+| winget | PR [#470707](https://github.com/microsoft/winget-pkgs/pull/470707) 已提交（1.7.1）；CLA 已确认，自动校验进行中 |
 | Microsoft Store | 未提交；MSIX 清单、图标和说明已准备，需要 Partner Center 账号 |
 | 代码签名 | 仍是内部自签证书；SignPath Foundation 免费 OSS 申请因表单 reCAPTCHA 无法提交，邮件已备好待发 |
 
@@ -36,10 +36,10 @@ winget validate --manifest .\packaging\winget\manifests\h\Hexin\DeepSeekTranslat
 winget install --manifest .\packaging\winget\manifests\h\Hexin\DeepSeekTranslator\1.6.2
 ```
 
-当前 PR：[#467817](https://github.com/microsoft/winget-pkgs/pull/467817)
+当前 PR：[#470707](https://github.com/microsoft/winget-pkgs/pull/470707)（1.7.1）
 
-- CLA 已签（`@microsoft-github-policy-service agree`）；
-- winget-pkgs 的 10 项自动校验全部通过（URL、清单、策略、扫描、安装、元数据等）；
+- CLA 已确认（`@microsoft-github-policy-service agree`）；
+- winget-pkgs 自动校验进行中（URL、清单、策略、扫描、安装、元数据等）；
 - 现在只等社区 moderator 人工审核，通常几小时到几天。
 
 以后每个版本：复制目录改版本号，把 `InstallerUrl` 指向新安装包、`InstallerSha256` 换成新值
@@ -165,7 +165,7 @@ MSIX 模板里的 `Identity Name` / `Publisher` 必须与 Partner Center 分配�
 | --- | --- |
 | GitHub 同步 | 101 个文件，commit `de2a666`，1.7.1 源码/文档已推送 |
 | GitHub Release | v1.7.1，安装包 53,440,760 字节，SHA256 `c4902eb9…` |
-| winget PR | #467817，CLA 已签，10/10 校验通过，等待 moderator |
+| winget PR | #470707（1.7.1），CLA 已确认，自动校验进行中 |
 | MSIX 准备 | `packaging/msix/Package.appxmanifest` + `Assets/`（6 张图标，由 `scripts/make-msix-assets.ps1` 生成） |
 | SignPath 申请 | **未提交**：表单的 reCAPTCHA 依赖 `www.gstatic.com`，浏览器加载失败；邮件草稿已备好，待发到 support@signpath.io |
 | 正式证书 | 未购买 |
