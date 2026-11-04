@@ -20,6 +20,22 @@ public partial class OverlayWindow : Window
 
     public const double MaxWidthDip = 960;
 
+    /// <summary>正文字号范围与默认值。</summary>
+    public const double MinFontSize = 12;
+
+    public const double MaxFontSize = 24;
+
+    public const double DefaultFontSize = 15;
+
+    public const double LargeFontSize = 20;
+
+    /// <summary>内容区最大高度的范围与默认值（DIP）。</summary>
+    public const double MinContentHeight = 240;
+
+    public const double MaxContentHeightLimit = 900;
+
+    public const double DefaultContentHeight = 500;
+
     private readonly DispatcherTimer _copyResetTimer;
     private readonly System.Windows.Media.Effects.Effect? _cardShadow;
     private PixelRect? _anchor;
@@ -30,6 +46,7 @@ public partial class OverlayWindow : Window
     private bool _dragging;
     private bool _streaming;
     private int _streamEpoch;
+    private double _fontSize = DefaultFontSize;
     private InputWatcher? _inputWatcher;
     private long _shownAtTicks;
 
@@ -38,6 +55,9 @@ public partial class OverlayWindow : Window
         InitializeComponent();
 
         _cardShadow = CardBorder.Effect;
+        MaxHeight = Math.Max(360, Math.Min(1000, SystemParameters.WorkArea.Height - 24));
+        ApplyFontSize(_fontSize);
+        ApplyMaxContentHeight(DefaultContentHeight);
 
         _copyResetTimer = new DispatcherTimer
         {
@@ -68,12 +88,36 @@ public partial class OverlayWindow : Window
     /// <summary>用户拖动边缘调整宽度后触发，参数为新的宽度（DIP）。</summary>
     public event Action<double>? WidthChanged;
 
+    /// <summary>用户调整字号后触发，参数为新的字号。</summary>
+    public event Action<double>? FontSizeChanged;
+
+    /// <summary>用户上下拖动内容区后触发，参数为新的最大高度（DIP）。</summary>
+    public event Action<double>? MaxContentHeightChanged;
+
     /// <summary>恢复上次使用的宽度；非法值回落到默认 440。</summary>
     public double PreferredWidth
     {
         get => Width;
         set => Width = Math.Clamp(value, MinWidthDip, MaxWidthDip);
     }
+
+    /// <summary>恢复上次使用的字号；非法值回落到 15。</summary>
+    public double PreferredFontSize
+    {
+        get => _fontSize;
+        set => ApplyFontSize(double.IsFinite(value) ? value : DefaultFontSize);
+    }
+
+    /// <summary>恢复上次使用的内容区最大高度；非法值回落到 500。</summary>
+    public double PreferredMaxContentHeight
+    {
+        get => BodyScroller.MaxHeight;
+        set => ApplyMaxContentHeight(double.IsFinite(value) ? value : DefaultContentHeight);
+    }
+
+    public double CurrentFontSize => _fontSize;
+
+    public double CurrentMaxContentHeight => BodyScroller.MaxHeight;
 
     public void ShowLoading(
         string original,
@@ -560,6 +604,109 @@ public partial class OverlayWindow : Window
     {
         HideOverlay();
         SettingsRequested?.Invoke();
+    }
+
+    private void FontDecreaseButton_Click(object sender, RoutedEventArgs e) => ChangeFontSize(-1);
+
+    private void FontIncreaseButton_Click(object sender, RoutedEventArgs e) => ChangeFontSize(1);
+
+    private void LargeFontButton_Click(object sender, RoutedEventArgs e)
+    {
+        SetFontSize(_fontSize >= LargeFontSize ? DefaultFontSize : LargeFontSize);
+    }
+
+    private void ChangeFontSize(double delta) => SetFontSize(_fontSize + delta);
+
+    private void SetFontSize(double value)
+    {
+        var target = Math.Clamp(value, MinFontSize, MaxFontSize);
+        if (Math.Abs(target - _fontSize) < 0.1) return;
+
+        ApplyFontSize(target);
+        FontSizeChanged?.Invoke(_fontSize);
+
+        if (!_userPositioned)
+        {
+            RepositionAfterLayout();
+        }
+    }
+
+    private void ApplyFontSize(double value)
+    {
+        _fontSize = Math.Clamp(value, MinFontSize, MaxFontSize);
+        TranslationText.FontSize = _fontSize;
+        OriginalText.FontSize = Math.Max(11, _fontSize - 2);
+        WordDetailText.FontSize = Math.Max(11, _fontSize - 3);
+        FontSizeText.Text = _fontSize.ToString("0");
+        UpdateLargeFontButton();
+    }
+
+    private void UpdateLargeFontButton()
+    {
+        LargeFontButton.Content = _fontSize >= LargeFontSize ? "默认" : "大字";
+        LargeFontButton.ToolTip = _fontSize >= LargeFontSize
+            ? "恢复默认字号"
+            : "切换到 20 号大字";
+    }
+
+    private void ApplyMaxContentHeight(double value)
+    {
+        BodyScroller.MaxHeight = Math.Clamp(value, MinContentHeight, GetContentHeightLimit());
+    }
+
+    private static double GetContentHeightLimit()
+    {
+        return Math.Min(
+            MaxContentHeightLimit,
+            Math.Max(MinContentHeight, SystemParameters.WorkArea.Height - 180));
+    }
+
+    private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if ((Keyboard.Modifiers & ModifierKeys.Control) == 0) return;
+
+        ChangeFontSize(e.Delta > 0 ? 1 : -1);
+        e.Handled = true;
+    }
+
+    private void BottomResizeThumb_DragStarted(object sender, DragStartedEventArgs e)
+    {
+        _resizing = true;
+        _dragging = true;
+        StopDismissWatcher();
+        CardBorder.Effect = null;
+    }
+
+    private void BottomResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        var target = Math.Clamp(
+            BodyScroller.MaxHeight + e.VerticalChange,
+            MinContentHeight,
+            GetContentHeightLimit());
+        if (Math.Abs(target - BodyScroller.MaxHeight) < 0.5) return;
+
+        BodyScroller.MaxHeight = target;
+    }
+
+    private void BottomResizeThumb_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _resizing = false;
+        _dragging = false;
+        CardBorder.Effect = _cardShadow;
+
+        if (!_userPositioned)
+        {
+            StartDismissWatcher();
+        }
+
+        MaxContentHeightChanged?.Invoke(BodyScroller.MaxHeight);
+    }
+
+    private void BottomResizeThumb_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        ApplyMaxContentHeight(DefaultContentHeight);
+        MaxContentHeightChanged?.Invoke(BodyScroller.MaxHeight);
+        e.Handled = true;
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)

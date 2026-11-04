@@ -24,6 +24,18 @@ public sealed class AppSettings
     /// <summary>浮层宽度（DIP，320~960）；用户拖动边缘后记住。</summary>
     public double OverlayWidth { get; set; } = 440;
 
+    /// <summary>浮层正文字号（12~24，默认 15）。</summary>
+    public double OverlayFontSize { get; set; } = 15;
+
+    /// <summary>浮层内容区最大高度（DIP，240~900，默认 500）；用户上下拖动后记住。</summary>
+    public double OverlayMaxContentHeight { get; set; } = 500;
+
+    /// <summary>
+    /// 用户强制走剪贴板取词的应用（进程名，每行/逗号分隔，可带 .exe）。
+    /// 用于 WPS、小绿鲸等 UIA 不可靠或未内置支持的软件。
+    /// </summary>
+    public string ForceClipboardApps { get; set; } = "";
+
     /// <summary>
     /// 术语表：每行一条 <c>原文=译文</c>；译文留空表示保留原文。
     /// </summary>

@@ -51,6 +51,7 @@ public sealed class AppController : IDisposable
         _capture.SelectionHotkey = _settings.TranslateSelectionHotkey;
         _capture.ClipboardHotkey = _settings.TranslateClipboardHotkey;
         _capture.OcrHotkey = _settings.OcrHotkey;
+        _capture.ForceClipboardApps = _settings.ForceClipboardApps;
 
         if (_settings.AutoStart)
         {
@@ -502,25 +503,42 @@ public sealed class AppController : IDisposable
         _overlay!.ShowError(message, code, showSettings, canRetry);
     }
 
+    private void SaveOverlaySettings()
+    {
+        try
+        {
+            _settingsStore.Save(_settings);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("保存浮层设置失败", ex);
+        }
+    }
+
     private void EnsureOverlay()
     {
         if (_overlay is not null) return;
 
         _overlay = new OverlayWindow
         {
-            PreferredWidth = _settings.OverlayWidth > 0 ? _settings.OverlayWidth : 440
+            PreferredWidth = _settings.OverlayWidth > 0 ? _settings.OverlayWidth : 440,
+            PreferredFontSize = _settings.OverlayFontSize,
+            PreferredMaxContentHeight = _settings.OverlayMaxContentHeight
         };
         _overlay.WidthChanged += width =>
         {
             _settings.OverlayWidth = width;
-            try
-            {
-                _settingsStore.Save(_settings);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("保存浮层宽度失败", ex);
-            }
+            SaveOverlaySettings();
+        };
+        _overlay.FontSizeChanged += size =>
+        {
+            _settings.OverlayFontSize = size;
+            SaveOverlaySettings();
+        };
+        _overlay.MaxContentHeightChanged += height =>
+        {
+            _settings.OverlayMaxContentHeight = height;
+            SaveOverlaySettings();
         };
         _overlay.RetryRequested += () =>
         {
@@ -655,6 +673,7 @@ public sealed class AppController : IDisposable
             _capture.SelectionHotkey = settings.TranslateSelectionHotkey;
             _capture.ClipboardHotkey = settings.TranslateClipboardHotkey;
             _capture.OcrHotkey = settings.OcrHotkey;
+            _capture.ForceClipboardApps = settings.ForceClipboardApps;
             _tray?.SetAutoStartChecked(settings.AutoStart);
             ApplySelectionIconSetting();
 
@@ -731,7 +750,9 @@ public sealed class AppController : IDisposable
             $"设置文件：{AppPaths.SettingsFile}（{(File.Exists(AppPaths.SettingsFile) ? "存在" : "缺失")}）");
         builder.AppendLine($"API Key：{(_secretStore.HasSecret() ? _secretStore.MaskedKey() : "未配置")}");
         builder.AppendLine($"模型：{_settings.Model}");
-        builder.AppendLine($"浮层宽度：{_settings.OverlayWidth:0} DIP");
+        builder.AppendLine($"浮层宽度：{_settings.OverlayWidth:0} DIP，字号 {_settings.OverlayFontSize:0}，内容最大高度 {_settings.OverlayMaxContentHeight:0} DIP");
+        builder.AppendLine(
+            $"强制剪贴板：{AppCompatibility.ParseUserApps(_settings.ForceClipboardApps).Count} 个（{_settings.ForceClipboardApps.Replace("\r", " ").Replace("\n", " ")}）");
         builder.AppendLine(
             $"翻译缓存：{_cache.Count} 条（{(_settings.EnableCache ? "启用" : "关闭")}）");
         builder.AppendLine($"流式输出：{(_settings.EnableStreaming ? "启用" : "关闭")}");
@@ -758,7 +779,15 @@ public sealed class AppController : IDisposable
             : ElevationHelper.GetProcessName(foregroundPid);
         var foregroundElevated = foregroundPid != 0 &&
                                  ElevationHelper.IsProcessElevated(foregroundPid);
+        var foregroundTitle = NativeMethods.GetWindowTitle(hwnd);
+        var foregroundPath = foregroundPid == 0
+            ? ""
+            : ElevationHelper.GetProcessPath(foregroundPid);
         builder.AppendLine($"前台窗口：{foregroundName}{(foregroundElevated ? "（管理员）" : "")}");
+        builder.AppendLine($"窗口标题：{foregroundTitle}");
+        builder.AppendLine($"可执行文件：{foregroundPath}");
+        builder.AppendLine(
+            $"取词规则：{AppCompatibility.Describe(foregroundName, foregroundTitle, _settings.ForceClipboardApps, foregroundPath)}");
         builder.AppendLine($"剪贴板：{DescribeClipboard()}");
         builder.AppendLine(
             $"OCR 语言：{(OcrService.GetAvailableLanguages() is { Count: > 0 } languages ? string.Join(", ", languages) : "未安装")}");
@@ -1020,10 +1049,13 @@ public sealed class AppController : IDisposable
             if (ScreenGeometry.IsForegroundFullscreen()) return;
 
             var appName = ElevationHelper.GetProcessName(processId);
+            var windowTitle = NativeMethods.GetWindowTitle(hwnd);
+            var processPath = ElevationHelper.GetProcessPath(processId);
 
-            // 微信 / Zotero / 部分 PDF 阅读器没有 UIA 文本选区，拖选后直接给图标，
-            // 点击时再走「自动 Ctrl+C + 剪贴板」回退。
-            if (allowClipboardOnly && AppCompatibility.IsClipboardOnly(appName))
+            // 微信 / Zotero / WPS / 小绿鲸 / 部分 PDF 阅读器没有可靠的 UIA 文本选区，
+            // 拖选后直接给图标，点击时再走「自动 Ctrl+C + 剪贴板」回退。
+            if (allowClipboardOnly &&
+                AppCompatibility.IsClipboardOnly(appName, windowTitle, _settings.ForceClipboardApps, processPath))
             {
                 ShowSelectionToolbar(point);
                 return;

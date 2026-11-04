@@ -4,7 +4,8 @@ param(
     [string]$Repo = 'hxxhxhxx/deepseek-translator',
     [string]$Branch = 'main',
     [string]$Message = '',
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$SkipWorkflow
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,7 +37,7 @@ try {
     }
 
     $workflowSource = Join-Path $root 'packaging/github/build.yml'
-    if (Test-Path $workflowSource) {
+    if (-not $SkipWorkflow -and (Test-Path $workflowSource)) {
         $workflowTarget = Join-Path $export '.github/workflows'
         New-Item -ItemType Directory -Path $workflowTarget -Force | Out-Null
         Copy-Item $workflowSource (Join-Path $workflowTarget 'build.yml') -Force

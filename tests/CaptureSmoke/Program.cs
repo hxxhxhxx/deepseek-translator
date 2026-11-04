@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using DeepSeekTranslator.Models;
 using DeepSeekTranslator.Services;
+using DeepSeekTranslator.Views;
 
 namespace CaptureSmoke;
 
@@ -159,6 +160,44 @@ internal static class Program
                 else
                 {
                     Console.WriteLine("FAIL  单词详解面板未显示");
+                    exitCode = 1;
+                }
+
+                overlay.PreferredFontSize = 24;
+                var fontBox = overlay.FindName("TranslationText") as TextBox;
+                if (Math.Abs(overlay.CurrentFontSize - 24) < 0.1 &&
+                    fontBox is not null &&
+                    Math.Abs(fontBox.FontSize - 24) < 0.1)
+                {
+                    Console.WriteLine("PASS  浮层字号可调（24）");
+                }
+                else
+                {
+                    Console.WriteLine($"FAIL  浮层字号: {overlay.CurrentFontSize}");
+                    exitCode = 1;
+                }
+
+                overlay.PreferredFontSize = 1;
+                if (Math.Abs(overlay.CurrentFontSize - OverlayWindow.MinFontSize) < 0.1)
+                {
+                    Console.WriteLine("PASS  浮层字号下限 clamp（12）");
+                }
+                else
+                {
+                    Console.WriteLine($"FAIL  浮层字号下限: {overlay.CurrentFontSize}");
+                    exitCode = 1;
+                }
+
+                overlay.PreferredFontSize = OverlayWindow.DefaultFontSize;
+                overlay.PreferredMaxContentHeight = 300;
+                var bodyScroller = overlay.FindName("BodyScroller") as ScrollViewer;
+                if (bodyScroller is not null && Math.Abs(bodyScroller.MaxHeight - 300) < 0.1)
+                {
+                    Console.WriteLine("PASS  浮层内容高度可调（300）");
+                }
+                else
+                {
+                    Console.WriteLine($"FAIL  浮层内容高度: {bodyScroller?.MaxHeight}");
                     exitCode = 1;
                 }
 

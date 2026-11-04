@@ -33,6 +33,27 @@ Check(MathText.Normalize(@"$f \times g \approx h$") == "f × g ≈ h", "LaTeX �
 
 var zhDetection = LanguageDetector.Detect("你好，世界。");
 Check(zhDetection.Direction == TranslationDirection.ChineseToEnglish, "中文 → 英文方向检测");
+
+Check(AppCompatibility.IsClipboardOnly("wps"), "WPS 走剪贴板");
+Check(AppCompatibility.IsClipboardOnly("小绿鲸英文文献阅读器"), "小绿鲸走剪贴板");
+Check(
+    AppCompatibility.IsClipboardOnly("unknown", "论文.docx - WPS Office"),
+    "窗口标题 WPS 兜底");
+Check(
+    AppCompatibility.IsClipboardOnly("unknown", "论文 - 小绿鲸英文文献阅读器"),
+    "窗口标题小绿鲸兜底");
+Check(
+    AppCompatibility.IsClipboardOnly("myreader", null, "myreader\nfoo.exe"),
+    "用户强制剪贴板列表");
+Check(
+    !AppCompatibility.IsClipboardOnly("notepad", "无标题 - 记事本"),
+    "普通应用仍走 UIA");
+Check(
+    AppCompatibility.IsClipboardOnly("unknown", null, null, @"C:\Program Files\xljsci\小绿鲸英文文献阅读器.exe"),
+    "可执行文件路径兜底 xljsci");
+Check(
+    AppCompatibility.Describe("wps", null, "").StartsWith("clipboard/process"),
+    "诊断规则描述");
 var enDetection = LanguageDetector.Detect("Hello world, this is English.");
 Check(enDetection.Direction == TranslationDirection.EnglishToChinese, "英文 → 中文方向检测");
 var mixedZh = LanguageDetector.Detect("使用 OpenAI API 调用 GPT-4 模型");

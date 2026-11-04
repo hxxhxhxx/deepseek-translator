@@ -38,7 +38,9 @@ public partial class SettingsWindow : Window
         EnableCacheCheckBox.IsChecked = _settings.EnableCache;
         EnableStreamingCheckBox.IsChecked = _settings.EnableStreaming;
         GlossaryBox.Text = _settings.Glossary;
+        ForceClipboardAppsBox.Text = _settings.ForceClipboardApps;
         UpdateGlossaryCount();
+        UpdateForceClipboardCount();
         LoadHotkeys();
 
         foreach (var box in new[]
@@ -127,6 +129,7 @@ public partial class SettingsWindow : Window
             _settings.EnableCache = EnableCacheCheckBox.IsChecked == true;
             _settings.EnableStreaming = EnableStreamingCheckBox.IsChecked == true;
             _settings.Glossary = GlossaryBox.Text.Trim();
+            _settings.ForceClipboardApps = ForceClipboardAppsBox.Text.Trim();
             _settings.OcrLanguage = ocrLanguage;
             _settings.TranslateSelectionHotkey = hotkeys.Selection.Display;
             _settings.TranslateClipboardHotkey = hotkeys.Clipboard.Display;
@@ -308,6 +311,18 @@ public partial class SettingsWindow : Window
     private void GlossaryBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         UpdateGlossaryCount();
+    }
+
+    private void ForceClipboardAppsBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        UpdateForceClipboardCount();
+    }
+
+    private void UpdateForceClipboardCount()
+    {
+        if (ForceClipboardCountText is null) return;
+        var count = AppCompatibility.ParseUserApps(ForceClipboardAppsBox.Text).Count;
+        ForceClipboardCountText.Text = $"{count} 个";
     }
 
     private void UpdateGlossaryCount()

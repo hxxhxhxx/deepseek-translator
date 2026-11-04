@@ -1,14 +1,14 @@
 # 分发与签名
 
-当前状态（2026-11）：
+当前状态（2026-11-02）：
 
 | 渠道 | 状态 |
 | --- | --- |
 | Gitee Releases + `latest.json` 自动更新 | 已上线，1.6.2 |
-| GitHub 镜像 | 停在 1.3.7，需用 token 跑 `scripts/github-sync.ps1` |
-| winget | 清单已准备并通过 `winget validate`，待提交 PR |
-| Microsoft Store | 未开始，需要 Partner Center 账号 + MSIX |
-| 代码签名 | 目前是内部自签证书，所以 SmartScreen 显示“未知发布者” |
+| GitHub 镜像 | 已同步 1.6.2（commit `f19d4ec`），Release v1.6.2 已上传安装包 |
+| winget | PR [#467817](https://github.com/microsoft/winget-pkgs/pull/467817) 已提交；CLA 已签，10/10 自动校验通过，等待人工审核 |
+| Microsoft Store | 未提交；MSIX 清单、图标和说明已准备，需要 Partner Center 账号 |
+| 代码签名 | 仍是内部自签证书；SignPath Foundation 免费 OSS 申请因表单 reCAPTCHA 无法提交，邮件已备好待发 |
 
 ---
 
@@ -36,24 +36,25 @@ winget validate --manifest .\packaging\winget\manifests\h\Hexin\DeepSeekTranslat
 winget install --manifest .\packaging\winget\manifests\h\Hexin\DeepSeekTranslator\1.6.2
 ```
 
-提交到官方仓库：
+当前 PR：[#467817](https://github.com/microsoft/winget-pkgs/pull/467817)
 
-1. Fork [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)；
-2. 把上面 4 个文件放到 fork 的同一路径 `manifests/h/Hexin/DeepSeekTranslator/1.6.2/`；
-3. 向 `microsoft/winget-pkgs` 发 PR，标题 `New package: Hexin.DeepSeekTranslator version 1.6.2`；
-4. 等待自动校验（URL 可访问、SHA256 匹配、清单 schema）和人工审核。
+- CLA 已签（`@microsoft-github-policy-service agree`）；
+- winget-pkgs 的 10 项自动校验全部通过（URL、清单、策略、扫描、安装、元数据等）；
+- 现在只等社区 moderator 人工审核，通常几小时到几天。
 
 以后每个版本：复制目录改版本号，把 `InstallerUrl` 指向新安装包、`InstallerSha256` 换成新值
 （`releases\v<版本>\latest.json` 里的 `sha256`），再发 PR。
 
-> 安装包目前放在 Gitee。winget 校验机在海外，Gitee 直链可能较慢；如果审核反馈下载失败，
-> 把安装包同时上传到 GitHub Releases，清单里改成 GitHub 的 release 资源地址。
+> 安装包同时放在 Gitee 和 GitHub Release；清单里的 URL 已改成 GitHub Release
+> `https://github.com/hxxhxhxx/deepseek-translator/releases/download/v1.6.2/...`，海外校验机下载更稳。
 
 ---
 
 ## 2. GitHub / Gitee 双源
 
-GitHub 仓库：<https://github.com/hxxhxhxx/deepseek-translator>（当前 1.3.7 快照）。
+GitHub 仓库：<https://github.com/hxxhxhxx/deepseek-translator>（已同步到 1.6.2，commit `f19d4ec`）。
+
+Release：<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.6.2>（附安装包与 SignPath/隐私声明）。
 
 同步脚本：`scripts/github-sync.ps1`
 
@@ -154,3 +155,73 @@ MSIX 模板里的 `Identity Name` / `Publisher` 必须与 Partner Center 分配�
 `Publisher` 还要与签名证书主题一致（Store 会重新签名，但本地测试需要自签）。
 
 > Store 版和 Gitee 版可以共存，但建议二选一作为主渠道，避免自动更新逻辑冲突。
+
+
+---
+
+## 5. 2026-11-02 当前进度
+
+| 事项 | 结果 |
+| --- | --- |
+| GitHub 同步 | 100 个文件，commit `f19d4ec`，旧的 1.3.7 快照已被替换 |
+| GitHub Release | v1.6.2，安装包 53,453,504 字节，SHA256 `a53423e0…` |
+| winget PR | #467817，CLA 已签，10/10 校验通过，等待 moderator |
+| MSIX 准备 | `packaging/msix/Package.appxmanifest` + `Assets/`（6 张图标，由 `scripts/make-msix-assets.ps1` 生成） |
+| SignPath 申请 | **未提交**：表单的 reCAPTCHA 依赖 `www.gstatic.com`，浏览器加载失败；邮件草稿已备好，待发到 support@signpath.io |
+| 正式证书 | 未购买 |
+
+> 分发相关的公开文件：`packaging/public-README.md`（GitHub 首页）、`packaging/public/LICENSE`、
+> `packaging/github/build.yml`（CI）。旧的 `github-export/` 快照已删除，避免再推旧代码。
+>
+> 注意：GitHub 仓库里的 `docs/` 是 2026-11-01 同步时的版本；本文档 11-02 的更新要等下次
+> `scripts/github-sync.ps1` 才会出现在 GitHub。
+
+---
+
+## 6. SignPath Foundation（免费 OSS 签名，进行中）
+
+SignPath Foundation 给开源项目免费签发代码签名证书（证书主体是 SignPath Foundation）。
+本项目 MIT、有公开仓库和 Release，符合基本条件，但需要人工审核“可验证声誉”。
+
+已准备：
+
+- 申请材料：项目名、仓库、Release、Privacy、Category=Productivity、Build=GitHub Actions、Maintainer=Individual；
+- Release v1.6.2 的说明里已加入 SignPath 要求的声明与隐私说明。
+
+当前阻塞：申请表单的 reCAPTCHA 脚本来自 `www.gstatic.com`，在本机浏览器里 `ERR_CONNECTION_CLOSED`，
+点 Submit 不会发出请求。备选是发邮件到 `support@signpath.io`（正文见会话记录）。
+
+> SignPath 的证书发布者显示为 “SignPath Foundation”，不是应用名；它能消除“未知发布者”，
+> 但仍需遵守其 Code of Conduct、MFA、每次发布人工批准等要求。
+
+
+### 邮件模板（备用）
+
+```text
+To: support@signpath.io
+Subject: OSS code signing application - DeepSeek Translator (MIT)
+
+Hello SignPath Foundation,
+
+I would like to apply for the free OSS code signing subscription. The web form
+at https://signpath.org/apply.html does not submit in my browser (reCAPTCHA
+from gstatic fails to load), so no request is sent.
+
+Project: DeepSeek 划词翻译 (DeepSeek Translator)
+Repo: https://github.com/hxxhxhxx/deepseek-translator
+License: MIT
+Release: https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.6.2
+Category: Productivity
+Description: Windows 11 tray app translating selected text in Word, browsers,
+PDFs, WeChat and PowerPoint via the DeepSeek API.
+Build system: GitHub Actions
+Maintainer type: Individual
+Reputation: GitHub repository with public releases; winget PR #467817 passed
+all 10 winget-pkgs automated checks.
+Contact: Xin He <mihexin@outlook.com>
+
+Could you create the application manually, or advise an alternative route?
+
+Thank you,
+Xin He
+```

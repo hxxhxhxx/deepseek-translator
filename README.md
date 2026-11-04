@@ -9,6 +9,8 @@
 ## 功能
 
 - **全局划词**：选中文字后鼠标旁出现「译」，点一下即翻译；也支持全局快捷键。
+- **WPS / 小绿鲸**：WPS 文字/PDF、小绿鲸英文文献阅读器可直接划词取词。
+- **字号与高度**：浮层支持 `A−/A+`、`Ctrl+滚轮`、一键大字，底部可上下拉伸。
 - **多应用取词**：Word（UIA）、Edge/Chrome 网页与 PDF、PowerPoint、微信、Zotero、Foxit/Acrobat（剪贴板回退）。
 - **截图 OCR**：框选屏幕区域识别并翻译（Windows OCR，中/英）。
 - **术语表**：每行 `原文=译文`，强制指定译法，例如 `PA=功率放大器`。
@@ -26,7 +28,7 @@
 
 下载 `DeepSeekTranslator-<版本>-setup.exe`，双击安装。按用户安装，不需要管理员权限。
 
-**winget（清单已准备，等待 microsoft/winget-pkgs 合并）**
+**winget（PR #467817 已提交，10 项自动校验通过，等待审核）**
 
 ```powershell
 winget install Hexin.DeepSeekTranslator
@@ -64,7 +66,7 @@ powershell -File scripts/test.ps1
 
 - Gitee：主发布源，`latest.json` 自动更新；
 - GitHub：代码镜像（本仓库）；
-- winget：清单在 `packaging/winget`；
+- winget：清单在 `packaging/winget`，PR #467817 审核中；
 - Microsoft Store：MSIX 模板与图标见 `packaging/msix`；
 - 详细分发/签名步骤见 [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)。
 

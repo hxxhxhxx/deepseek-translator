@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="DeepSeek 翻译"
         Width="440"
-        MaxHeight="680"
+        MaxHeight="1000"
         SizeToContent="Height"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -15,7 +15,8 @@
         WindowStartupLocation="Manual"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        PreviewMouseWheel="Window_PreviewMouseWheel">
     <Grid>
         <Grid Margin="12">
         <Border x:Name="CardBorder"
@@ -338,11 +339,52 @@
                         Background="#FBFDFF"
                         CornerRadius="0,0,18,18">
                     <Grid>
-                        <Button x:Name="SettingsButton"
-                                Style="{StaticResource LinkButton}"
-                                Content="设置"
-                                VerticalAlignment="Center"
-                                Click="SettingsButton_Click" />
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="SettingsButton"
+                                    Style="{StaticResource LinkButton}"
+                                    Content="设置"
+                                    VerticalAlignment="Center"
+                                    Click="SettingsButton_Click" />
+
+                            <Border Width="1"
+                                    Height="14"
+                                    Margin="9,0"
+                                    Background="#E2E8F0"
+                                    VerticalAlignment="Center" />
+
+                            <Button x:Name="FontDecreaseButton"
+                                    Height="24"
+                                    Padding="7,0"
+                                    FontSize="10.5"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Content="A−"
+                                    ToolTip="减小字号（Ctrl+滚轮）"
+                                    Click="FontDecreaseButton_Click" />
+                            <TextBlock x:Name="FontSizeText"
+                                       Width="24"
+                                       Text="15"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="10.5"
+                                       Foreground="#475569" />
+                            <Button x:Name="FontIncreaseButton"
+                                    Height="24"
+                                    Padding="7,0"
+                                    FontSize="10.5"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Content="A+"
+                                    ToolTip="增大字号（Ctrl+滚轮）"
+                                    Click="FontIncreaseButton_Click" />
+                            <Button x:Name="LargeFontButton"
+                                    Height="24"
+                                    Padding="8,0"
+                                    Margin="6,0,0,0"
+                                    FontSize="10.5"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Content="大字"
+                                    ToolTip="在默认字号和大字号之间切换"
+                                    Click="LargeFontButton_Click" />
+                        </StackPanel>
 
                         <StackPanel Orientation="Horizontal"
                                     HorizontalAlignment="Right">
@@ -413,6 +455,39 @@
                         <Border x:Name="HoverLine"
                                 Width="2"
                                 HorizontalAlignment="Right"
+                                Background="#3B82F6"
+                                CornerRadius="1"
+                                Opacity="0" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="HoverLine" Property="Opacity" Value="0.85" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
+
+        <!-- 底部边缘：上下拖动调整内容区最大高度；双击恢复默认 -->
+        <Thumb x:Name="BottomResizeThumb"
+               Height="10"
+               Margin="12,0,12,0"
+               HorizontalAlignment="Stretch"
+               VerticalAlignment="Bottom"
+               Cursor="SizeNS"
+               ToolTip="上下拖动调整内容高度；双击恢复默认"
+               DragStarted="BottomResizeThumb_DragStarted"
+               DragDelta="BottomResizeThumb_DragDelta"
+               DragCompleted="BottomResizeThumb_DragCompleted"
+               MouseDoubleClick="BottomResizeThumb_MouseDoubleClick">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="Transparent">
+                        <Border x:Name="HoverLine"
+                                Width="36"
+                                Height="2"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Bottom"
                                 Background="#3B82F6"
                                 CornerRadius="1"
                                 Opacity="0" />

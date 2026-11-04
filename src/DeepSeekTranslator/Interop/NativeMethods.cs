@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Text;
 using IDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
 
 namespace DeepSeekTranslator.Interop;
@@ -65,6 +66,22 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int maxCount);
+
+    /// <summary>读取窗口标题；失败或没有标题时返回空字符串。</summary>
+    public static string GetWindowTitle(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+        {
+            return string.Empty;
+        }
+
+        var buffer = new StringBuilder(512);
+        var length = GetWindowText(hwnd, buffer, buffer.Capacity);
+        return length > 0 ? buffer.ToString(0, length) : string.Empty;
+    }
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

@@ -67,4 +67,21 @@ public static class ElevationHelper
             return "未知应用";
         }
     }
+
+    /// <summary>
+    /// 读取进程可执行文件路径；用于兼容进程名乱码的应用（例如小绿鲸安装包）。
+    /// 读不到时返回空字符串。
+    /// </summary>
+    public static string GetProcessPath(uint processId)
+    {
+        try
+        {
+            using var process = Process.GetProcessById((int)processId);
+            return process.MainModule?.FileName ?? "";
+        }
+        catch
+        {
+            return "";
+        }
+    }
 }

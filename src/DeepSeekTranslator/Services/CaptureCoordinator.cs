@@ -18,6 +18,9 @@ public sealed class CaptureCoordinator
 
     public string OcrHotkey { get; set; } = HotkeyParser.DefaultOcr;
 
+    /// <summary>设置里用户自定义的强制剪贴板进程名列表（原始文本）。</summary>
+    public string ForceClipboardApps { get; set; } = "";
+
     public async Task<CaptureResult> CaptureSelectionAsync(CancellationToken cancellationToken)
     {
         var hwnd = NativeMethods.GetForegroundWindow();
@@ -28,6 +31,10 @@ public sealed class CaptureCoordinator
 
         NativeMethods.GetWindowThreadProcessId(hwnd, out var processId);
         var appName = ElevationHelper.GetProcessName(processId);
+        var processPath = ElevationHelper.GetProcessPath(processId);
+        var windowTitle = NativeMethods.GetWindowTitle(hwnd);
+        var clipboardOnly = AppCompatibility.IsClipboardOnly(
+            appName, windowTitle, ForceClipboardApps, processPath);
 
         if (processId == (uint)Environment.ProcessId)
         {
@@ -36,7 +43,8 @@ public sealed class CaptureCoordinator
                 "当前焦点在翻译浮层或设置窗口上。请先回到要翻译的软件选中文字，再按快捷键。");
         }
 
-        Logger.Info($"capture: app={appName}, uiaSkipped={ShouldSkipUia(appName)}");
+        Logger.Info(
+            $"capture: app={appName}, path={processPath}, title={windowTitle}, match={AppCompatibility.Describe(appName, windowTitle, ForceClipboardApps, processPath)}");
 
         if (processId != 0 &&
             ElevationHelper.IsProcessElevated(processId) &&
@@ -48,7 +56,7 @@ public sealed class CaptureCoordinator
         }
 
         UiaReadResult? uia = null;
-        if (!ShouldSkipUia(appName))
+        if (!ShouldSkipUia(appName, windowTitle, processPath))
         {
             uia = await _uia.TryReadAsync(hwnd, processId, cancellationToken)
                 .ConfigureAwait(false);
@@ -114,10 +122,11 @@ public sealed class CaptureCoordinator
         return $"请确认已选中可复制的文字；如果已经手动复制，请按 {ClipboardHotkey}（翻译剪贴板），不要按 {SelectionHotkey}。";
     }
 
-    private static bool ShouldSkipUia(string appName)
+    private bool ShouldSkipUia(string appName, string windowTitle, string processPath)
     {
         // 这些应用没有可靠的 UIA 选区；直接走剪贴板，避免每次等待 UIA 超时。
-        return AppCompatibility.IsClipboardOnly(appName) || AppCompatibility.IsBrowser(appName);
+        return AppCompatibility.IsClipboardOnly(appName, windowTitle, ForceClipboardApps, processPath)
+               || AppCompatibility.IsBrowser(appName);
     }
 
     public async Task<CaptureResult> ReadClipboardAsync(CancellationToken cancellationToken)
