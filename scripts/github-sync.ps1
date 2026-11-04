@@ -29,7 +29,7 @@ try {
         }
     }
 
-    foreach ($file in @('.gitignore', 'DeepSeekTranslator.sln', 'global.json')) {
+    foreach ($file in @('.gitignore', 'DeepSeekTranslator.sln', 'global.json', 'PRIVACY.md')) {
         $source = Join-Path $root $file
         if (Test-Path $source) {
             Copy-Item $source (Join-Path $export $file) -Force
@@ -76,7 +76,8 @@ try {
         param([string]$Method, [string]$Uri, $Body)
         if ($null -ne $Body) {
             $json = ConvertTo-Json -InputObject $Body -Depth 12 -Compress
-            return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $headers -Body $json -ContentType 'application/json'
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+            return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $headers -Body $bytes -ContentType 'application/json; charset=utf-8'
         }
         return Invoke-RestMethod -Method $Method -Uri $Uri -Headers $headers
     }

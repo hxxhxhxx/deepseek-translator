@@ -44,7 +44,7 @@ public sealed class CaptureCoordinator
         }
 
         Logger.Info(
-            $"capture: app={appName}, path={processPath}, title={windowTitle}, match={AppCompatibility.Describe(appName, windowTitle, ForceClipboardApps, processPath)}");
+            $"capture: app={appName}, match={AppCompatibility.Describe(appName, windowTitle, ForceClipboardApps, processPath)}");
 
         if (processId != 0 &&
             ElevationHelper.IsProcessElevated(processId) &&
