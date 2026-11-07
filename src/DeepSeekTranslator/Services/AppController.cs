@@ -523,7 +523,8 @@ public sealed class AppController : IDisposable
         {
             PreferredWidth = _settings.OverlayWidth > 0 ? _settings.OverlayWidth : 440,
             PreferredFontSize = _settings.OverlayFontSize,
-            PreferredMaxContentHeight = _settings.OverlayMaxContentHeight
+            PreferredMaxContentHeight = _settings.OverlayMaxContentHeight,
+            PreferredSpeechRate = _settings.SpeechRate
         };
         _overlay.WidthChanged += width =>
         {
@@ -670,6 +671,10 @@ public sealed class AppController : IDisposable
         _settingsWindow.SettingsSaved += settings =>
         {
             _settings = settings;
+            if (_overlay is not null)
+            {
+                _overlay.PreferredSpeechRate = settings.SpeechRate;
+            }
             _capture.SelectionHotkey = settings.TranslateSelectionHotkey;
             _capture.ClipboardHotkey = settings.TranslateClipboardHotkey;
             _capture.OcrHotkey = settings.OcrHotkey;

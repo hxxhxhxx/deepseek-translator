@@ -39,6 +39,8 @@ public partial class SettingsWindow : Window
         EnableStreamingCheckBox.IsChecked = _settings.EnableStreaming;
         GlossaryBox.Text = _settings.Glossary;
         ForceClipboardAppsBox.Text = _settings.ForceClipboardApps;
+        SpeechRateSlider.Value = Math.Clamp(_settings.SpeechRate, 0.5, 2.0);
+        UpdateSpeechRateText();
         UpdateGlossaryCount();
         UpdateForceClipboardCount();
         LoadHotkeys();
@@ -130,6 +132,7 @@ public partial class SettingsWindow : Window
             _settings.EnableStreaming = EnableStreamingCheckBox.IsChecked == true;
             _settings.Glossary = GlossaryBox.Text.Trim();
             _settings.ForceClipboardApps = ForceClipboardAppsBox.Text.Trim();
+            _settings.SpeechRate = Math.Clamp(SpeechRateSlider.Value, 0.5, 2.0);
             _settings.OcrLanguage = ocrLanguage;
             _settings.TranslateSelectionHotkey = hotkeys.Selection.Display;
             _settings.TranslateClipboardHotkey = hotkeys.Clipboard.Display;
@@ -316,6 +319,17 @@ public partial class SettingsWindow : Window
     private void ForceClipboardAppsBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         UpdateForceClipboardCount();
+    }
+
+    private void SpeechRateSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        UpdateSpeechRateText();
+    }
+
+    private void UpdateSpeechRateText()
+    {
+        if (SpeechRateText is null) return;
+        SpeechRateText.Text = $"{SpeechRateSlider.Value:0.00}×";
     }
 
     private void UpdateForceClipboardCount()

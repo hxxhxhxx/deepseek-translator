@@ -384,6 +384,15 @@
                                     Content="大字"
                                     ToolTip="在默认字号和大字号之间切换"
                                     Click="LargeFontButton_Click" />
+                            <Button x:Name="SpeechButton"
+                                    Height="24"
+                                    Padding="8,0"
+                                    Margin="6,0,0,0"
+                                    FontSize="10.5"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Content="朗读"
+                                    ToolTip="朗读译文"
+                                    Click="SpeechButton_Click" />
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal"

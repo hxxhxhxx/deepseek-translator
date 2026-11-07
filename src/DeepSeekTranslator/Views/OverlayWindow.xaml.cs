@@ -47,6 +47,8 @@ public partial class OverlayWindow : Window
     private bool _streaming;
     private int _streamEpoch;
     private double _fontSize = DefaultFontSize;
+    private double _speechRate = 1.0;
+    private SpeechService? _speech;
     private InputWatcher? _inputWatcher;
     private long _shownAtTicks;
 
@@ -58,6 +60,18 @@ public partial class OverlayWindow : Window
         MaxHeight = Math.Max(360, Math.Min(1000, SystemParameters.WorkArea.Height - 24));
         ApplyFontSize(_fontSize);
         ApplyMaxContentHeight(DefaultContentHeight);
+
+        try
+        {
+            _speech = new SpeechService();
+            _speech.SpeakingChanged += OnSpeechSpeakingChanged;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("初始化本地语音失败", ex);
+            SpeechButton.IsEnabled = false;
+            SpeechButton.ToolTip = "系统没有可用的语音包";
+        }
 
         _copyResetTimer = new DispatcherTimer
         {
@@ -119,6 +133,13 @@ public partial class OverlayWindow : Window
 
     public double CurrentMaxContentHeight => BodyScroller.MaxHeight;
 
+    /// <summary>朗读语速（0.5~2.0，默认 1.0）。</summary>
+    public double PreferredSpeechRate
+    {
+        get => _speechRate;
+        set => _speechRate = Math.Clamp(double.IsFinite(value) ? value : 1.0, 0.5, 2.0);
+    }
+
     public void ShowLoading(
         string original,
         PixelRect? anchor,
@@ -128,7 +149,8 @@ public partial class OverlayWindow : Window
         _userPositioned = false;
         _streaming = false;
         _streamEpoch++;
-        WordPanel.Visibility = Visibility.Collapsed;
+        StopSpeech();
+        SpeechButton.IsEnabled = false;WordPanel.Visibility = Visibility.Collapsed;
         _direction = direction;
         ApplyDirection(direction);
         _anchor = anchor;
@@ -164,6 +186,7 @@ public partial class OverlayWindow : Window
         ErrorSettingsButton.Visibility = Visibility.Collapsed;
         TranslationText.Text = result.Translation;
         TranslationText.Visibility = Visibility.Visible;
+        SpeechButton.IsEnabled = true;
         WarningPanel.Visibility = result.Truncated ? Visibility.Visible : Visibility.Collapsed;
         CopyButton.Visibility = Visibility.Visible;
         RetryButton.Visibility = Visibility.Visible;
@@ -192,6 +215,8 @@ public partial class OverlayWindow : Window
 
         _streaming = true;
         _direction = direction;
+        StopSpeech();
+        SpeechButton.IsEnabled = false;
         ApplyDirection(direction);
         SetOriginalVisible(true);
         LoadingPanel.Visibility = Visibility.Collapsed;
@@ -221,6 +246,8 @@ public partial class OverlayWindow : Window
     {
         _streaming = false;
         _streamEpoch++;
+        StopSpeech();
+        SpeechButton.IsEnabled = false;
         LoadingPanel.Visibility = Visibility.Collapsed;
         TranslationText.Visibility = Visibility.Collapsed;
         TranslationText.Text = string.Empty;
@@ -249,6 +276,7 @@ public partial class OverlayWindow : Window
     public void HideOverlay()
     {
         _copyResetTimer.Stop();
+        StopSpeech();
         StopDismissWatcher();
         Hide();
     }
@@ -288,6 +316,8 @@ public partial class OverlayWindow : Window
     public void ForceClose()
     {
         _allowClose = true;
+        _speech?.Dispose();
+        _speech = null;
         Close();
     }
 
@@ -598,6 +628,93 @@ public partial class OverlayWindow : Window
     private void RetryButton_Click(object sender, RoutedEventArgs e)
     {
         RetryRequested?.Invoke();
+    }
+
+    private async void SpeechButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_speech is null)
+        {
+            return;
+        }
+
+        if (_speech.IsSpeaking)
+        {
+            _speech.Stop();
+            return;
+        }
+
+        if (_streaming)
+        {
+            return;
+        }
+
+        var text = TranslationText.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        SpeechButton.IsEnabled = false;
+        try
+        {
+            await _speech.SpeakAsync(text, TargetSpeechLanguage(), _speechRate);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("朗读失败", ex);
+            SpeechButton.ToolTip = "朗读失败：" + ex.Message;
+            System.Windows.MessageBox.Show(
+                this,
+                "朗读失败：" + ex.Message,
+                "朗读",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+        finally
+        {
+            if (!_streaming)
+            {
+                SpeechButton.IsEnabled = true;
+            }
+        }
+    }
+
+    private void OnSpeechSpeakingChanged(bool speaking)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(() => OnSpeechSpeakingChanged(speaking)));
+            return;
+        }
+
+        SpeechButton.Content = speaking ? "停止" : "朗读";
+        SpeechButton.ToolTip = speaking ? "停止朗读" : "朗读译文";
+    }
+
+    private string TargetSpeechLanguage()
+    {
+        var direction = _direction;
+        if (direction == TranslationDirection.Unknown)
+        {
+            direction = LanguageDetector.Detect(TranslationText.Text).Direction;
+        }
+
+        return direction is TranslationDirection.ChineseToEnglish
+            or TranslationDirection.OtherToEnglish
+            ? "en-US"
+            : "zh-CN";
+    }
+
+    private void StopSpeech()
+    {
+        try
+        {
+            _speech?.Stop();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("停止朗读失败", ex);
+        }
     }
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)

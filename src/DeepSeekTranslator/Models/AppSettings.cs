@@ -24,8 +24,11 @@ public sealed class AppSettings
     /// <summary>浮层宽度（DIP，320~960）；用户拖动边缘后记住。</summary>
     public double OverlayWidth { get; set; } = 440;
 
-    /// <summary>浮层正文字号（12~24，默认 15）。</summary>
+    /// <summary>浮层字号（12~24，默认 15）。</summary>
     public double OverlayFontSize { get; set; } = 15;
+
+    /// <summary>朗读语速（0.5~2.0，默认 1.0）。</summary>
+    public double SpeechRate { get; set; } = 1.0;
 
     /// <summary>浮层内容区最大高度（DIP，240~900，默认 500）；用户上下拖动后记住。</summary>
     public double OverlayMaxContentHeight { get; set; } = 500;

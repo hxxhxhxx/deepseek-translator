@@ -189,6 +189,18 @@ internal static class Program
                 }
 
                 overlay.PreferredFontSize = OverlayWindow.DefaultFontSize;
+                overlay.PreferredSpeechRate = 1.5;
+                var speechButton = overlay.FindName("SpeechButton") as Button;
+                if (Math.Abs(overlay.PreferredSpeechRate - 1.5) < 0.01 && speechButton is not null)
+                {
+                    Console.WriteLine("PASS  朗读按钮与语速属性");
+                }
+                else
+                {
+                    Console.WriteLine($"FAIL  朗读按钮/语速: {overlay.PreferredSpeechRate}, button={speechButton is not null}");
+                    exitCode = 1;
+                }
+
                 overlay.PreferredMaxContentHeight = 300;
                 var bodyScroller = overlay.FindName("BodyScroller") as ScrollViewer;
                 if (bodyScroller is not null && Math.Abs(bodyScroller.MaxHeight - 300) < 0.1)

@@ -262,6 +262,32 @@
                     </StackPanel>
                 </Border>
 
+                <Border Style="{StaticResource CardBorder}" Padding="18,16" Margin="0,16,0,0">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock Text="朗读"
+                                       FontSize="13"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource InkBrush}" />
+                            <TextBlock x:Name="SpeechRateText"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       FontSize="10.5"
+                                       Foreground="#94A3B8" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Margin="0,6,0,0"
+                                   Text="只朗读译文；使用 Windows 本地语音，不联网。语速范围 0.5~2.0，默认 1.0。" />
+                        <Slider x:Name="SpeechRateSlider"
+                                Margin="0,8,0,0"
+                                Minimum="0.5"
+                                Maximum="2.0"
+                                TickFrequency="0.25"
+                                IsSnapToTickEnabled="True"
+                                ValueChanged="SpeechRateSlider_ValueChanged" />
+                    </StackPanel>
+                </Border>
+
                 <Grid Margin="0,16,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
