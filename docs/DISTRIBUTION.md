@@ -4,8 +4,8 @@
 
 | 渠道 | 状态 |
 | --- | --- |
-| Gitee Releases + `latest.json` 自动更新 | 已上线，1.7.1 |
-| GitHub 镜像 | 已同步 1.7.1（commit `de2a666`），Release v1.7.1 已上传安装包 |
+| Gitee Releases + `latest.json` 自动更新 | 已上线，1.8.0 |
+| GitHub 镜像 | 已同步 1.8.0（commit `031ac76`），Release v1.8.0 已上传安装包 |
 | winget | PR [#470707](https://github.com/microsoft/winget-pkgs/pull/470707) 已提交（1.7.1）；CLA 已确认，自动校验进行中 |
 | Microsoft Store | 未提交；MSIX 清单、图标和说明已准备，需要 Partner Center 账号 |
 | 代码签名 | 仍是内部自签证书；SignPath Foundation 免费 OSS 申请因表单 reCAPTCHA 无法提交，邮件已备好待发 |
@@ -52,9 +52,9 @@ winget install --manifest .\packaging\winget\manifests\h\Hexin\DeepSeekTranslato
 
 ## 2. GitHub / Gitee 双源
 
-GitHub 仓库：<https://github.com/hxxhxhxx/deepseek-translator>（已同步到 1.7.1，commit `de2a666`）。
+GitHub 仓库：<https://github.com/hxxhxhxx/deepseek-translator>（已同步到 1.8.0，commit `031ac76`）。
 
-Release：<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.7.1>（附安装包与 SignPath/隐私声明）。
+Release：<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.8.0>（附安装包与 SignPath/隐私声明）。
 
 同步脚本：`scripts/github-sync.ps1`
 
@@ -163,8 +163,8 @@ MSIX 模板里的 `Identity Name` / `Publisher` 必须与 Partner Center 分配�
 
 | 事项 | 结果 |
 | --- | --- |
-| GitHub 同步 | 101 个文件，commit `de2a666`，1.7.1 源码/文档已推送 |
-| GitHub Release | v1.7.1，安装包 53,440,760 字节，SHA256 `c4902eb9…` |
+| GitHub 同步 | 106 个文件，commit `031ac76`，1.8.0 源码/文档已推送 |
+| GitHub Release | v1.8.0，安装包 53,465,728 字节，SHA256 `0a2995c8…` |
 | winget PR | #470707（1.7.1），CLA 已确认，自动校验进行中 |
 | MSIX 准备 | `packaging/msix/Package.appxmanifest` + `Assets/`（6 张图标，由 `scripts/make-msix-assets.ps1` 生成） |
 | SignPath 申请 | **未提交**：表单的 reCAPTCHA 依赖 `www.gstatic.com`，浏览器加载失败；邮件草稿已备好，待发到 support@signpath.io |
