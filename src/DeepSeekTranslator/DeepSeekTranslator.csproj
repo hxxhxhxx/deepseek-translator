@@ -15,9 +15,9 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyName>DeepSeekTranslator</AssemblyName>
     <RootNamespace>DeepSeekTranslator</RootNamespace>
-    <Version>1.8.0</Version>
-    <FileVersion>1.8.0.0</FileVersion>
-    <AssemblyVersion>1.8.0.0</AssemblyVersion>
+    <Version>1.8.1</Version>
+    <FileVersion>1.8.1.0</FileVersion>
+    <AssemblyVersion>1.8.1.0</AssemblyVersion>
     <Authors>Internal</Authors>
     <Description>Windows desktop selection translator powered by DeepSeek</Description>
     <InvariantGlobalization>false</InvariantGlobalization>

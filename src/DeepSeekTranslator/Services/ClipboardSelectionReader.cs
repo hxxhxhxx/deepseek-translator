@@ -1,9 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using DeepSeekTranslator.Interop;
-using Clipboard = System.Windows.Clipboard;
 using IDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
-using TextDataFormat = System.Windows.TextDataFormat;
 
 namespace DeepSeekTranslator.Services;
 
@@ -225,27 +223,92 @@ public sealed class ClipboardSelectionReader
     {
         for (var attempt = 0; attempt < 8; attempt++)
         {
-            try
+            // 不在后台 STA 线程使用 System.Windows.Clipboard：WPF 剪贴板会在这类临时
+            // 线程上创建隐藏窗口/Dispatcher，线程退出时窗口过程可能抛 NRE 并直接
+            // FailFast（表现为 HwndSubclass.SubclassWndProc 崩溃）。这里只走 Win32。
+            if (TryReadClipboardTextWin32(out var text) &&
+                !string.IsNullOrWhiteSpace(text))
             {
-                if (Clipboard.ContainsText(TextDataFormat.UnicodeText))
-                {
-                    var text = Clipboard.GetText(TextDataFormat.UnicodeText);
-                    if (!string.IsNullOrWhiteSpace(text)) return text;
-                }
-            }
-            catch (COMException)
-            {
-                // 剪贴板被其他进程短暂占用，重试。
-            }
-            catch (Exception)
-            {
-                // 某些应用写入延迟，继续重试。
+                return text;
             }
 
             Thread.Sleep(35);
         }
 
         return null;
+    }
+
+    private static bool TryReadClipboardTextWin32(out string? text)
+    {
+        text = null;
+        if (!OpenClipboard(IntPtr.Zero))
+        {
+            return false;
+        }
+
+        try
+        {
+            var handle = GetClipboardData(CF_UNICODETEXT);
+            var ansi = false;
+            if (handle == IntPtr.Zero)
+            {
+                handle = GetClipboardData(CF_TEXT);
+                ansi = true;
+            }
+
+            if (handle == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            var pointer = GlobalLock(handle);
+            if (pointer == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            try
+            {
+                text = ansi
+                    ? Marshal.PtrToStringAnsi(pointer)
+                    : Marshal.PtrToStringUni(pointer);
+                return true;
+            }
+            finally
+            {
+                GlobalUnlock(handle);
+            }
+        }
+        finally
+        {
+            CloseClipboard();
+        }
+    }
+
+    private static void ClearClipboardWin32()
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            if (!OpenClipboard(IntPtr.Zero))
+            {
+                Thread.Sleep(30);
+                continue;
+            }
+
+            try
+            {
+                if (EmptyClipboard())
+                {
+                    return;
+                }
+            }
+            finally
+            {
+                CloseClipboard();
+            }
+
+            Thread.Sleep(30);
+        }
     }
 
     private static void RestoreClipboard(
@@ -272,7 +335,7 @@ public sealed class ClipboardSelectionReader
                 }
                 else if (originalWasEmpty)
                 {
-                    Clipboard.Clear();
+                    ClearClipboardWin32();
                     return;
                 }
                 else
@@ -323,4 +386,25 @@ public sealed class ClipboardSelectionReader
         thread.Start();
         return tcs.Task;
     }
+
+    private const uint CF_TEXT = 1;
+    private const uint CF_UNICODETEXT = 13;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool OpenClipboard(IntPtr hWndNewOwner);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool CloseClipboard();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr GetClipboardData(uint uFormat);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalLock(IntPtr hMem);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GlobalUnlock(IntPtr hMem);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool EmptyClipboard();
 }

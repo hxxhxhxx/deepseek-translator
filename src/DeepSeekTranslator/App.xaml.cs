@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
@@ -80,6 +81,8 @@ public partial class App : Application
             return;
         }
 
+        AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
+        AppDomain.CurrentDomain.FirstChanceException += OnFirstChanceException;
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
@@ -138,6 +141,46 @@ public partial class App : Application
     {
         Logger.Error("后台任务未处理异常", e.Exception);
         e.SetObserved();
+    }
+
+    private static int _firstChanceLogging;
+
+    private static void OnAppDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception ex)
+        {
+            Logger.Error("AppDomain 未处理异常", ex);
+        }
+        else
+        {
+            Logger.Info("AppDomain 未处理异常（非 Exception 对象）");
+        }
+    }
+
+    /// <summary>
+    /// WPF 窗口过程里抛出的 NRE 可能在运行时构造异常消息时递归 FailFast，
+    /// DispatcherUnhandledException 来不及记录。这里在第一现场只记类型和栈，
+    /// 不读取 ex.Message，避免再次触发资源查找。
+    /// </summary>
+    private static void OnFirstChanceException(object? sender, FirstChanceExceptionEventArgs e)
+    {
+        if (e.Exception is not NullReferenceException) return;
+        if (Interlocked.Exchange(ref _firstChanceLogging, 1) != 0) return;
+
+        try
+        {
+            var stack = Environment.StackTrace;
+            if (stack.Length > 4000) stack = stack[..4000];
+            Logger.Info($"first-chance NullReferenceException{Environment.NewLine}{stack}");
+        }
+        catch
+        {
+            // 记录异常不能再次影响崩溃路径。
+        }
+        finally
+        {
+            Volatile.Write(ref _firstChanceLogging, 0);
+        }
     }
 
     private async Task RunOcrSelfTestAsync()
