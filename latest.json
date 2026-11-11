@@ -1,0 +1,9 @@
+{
+    "version":  "1.8.2",
+    "url":  "https://gitee.com/hexin1225/deepseek-translator/releases/download/v1.8.2/DeepSeekTranslator-1.8.2-setup.exe",
+    "sha256":  "6c37f261d027339d26959a83d9f3c8cd65b3afc921a50ddd482a3e322480748e",
+    "size":  53480368,
+    "mandatory":  false,
+    "notes":  "Visio 划词兼容：先进入形状文字编辑并划选，再点击译或按选区翻译快捷键。",
+    "published":  "2026-11-11T13:59:20.4297199+08:00"
+}

@@ -15,3 +15,12 @@ releases/*/win-x64/
 # Signing secrets
 secrets/
 *.pfx
+
+# Local test, publishing and ACL diagnostic artifacts
+.build-temp/
+.publish-temp/
+.acl-repair/
+.github-sync-temp/
+.gitee-sync-temp/
+.publish-*.py
+.publish-state-*.json

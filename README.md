@@ -6,10 +6,14 @@
 
 ![浮层示例](docs/overlay-en-zh.png)
 
+**当前版本：1.8.2 · 新增 Visio 划词兼容**
+
+下载：[Gitee v1.8.2](https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.8.2) · [GitHub v1.8.2](https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.8.2)
+
 ## 功能
 
 - **全局划词**：选中文字后鼠标旁出现「译」，点一下即翻译；也支持全局快捷键。
-- **Visio**：双击形状文字，或选中形状后按 `F2` 进入文字编辑，拖选文字后点「译」或按选区翻译快捷键；只选中形状/连接线不属于文字选区。
+- **Visio**：双击形状文字，或选中形状后按 `F2` 进入文字编辑，拖选文字后点「译」或按选区翻译快捷键；只选中形状/连接线不属于文字选区，Visio 原生复制可能给出整块文字。
 - **WPS / 小绿鲸**：WPS 文字/PDF、小绿鲸英文文献阅读器可直接划词取词。
 - **Steam**：Steam 商店/社区/聊天可直接划词；游戏内覆盖层走剪贴板。
 - **本地朗读**：浮层「朗读」按钮用 Windows 本地语音读译文，支持中英文和 0.5~2.0 语速。
@@ -31,7 +35,7 @@
 
 下载 `DeepSeekTranslator-<版本>-setup.exe`，双击安装。按用户安装，不需要管理员权限。
 
-**winget（PR #467817 已提交，10 项自动校验通过，等待审核）**
+**winget（PR #470707：1.7.1 已提交，等待审核；1.8.2 尚未提交）**
 
 ```powershell
 winget install Hexin.DeepSeekTranslator
@@ -68,7 +72,7 @@ powershell -File scripts/test.ps1
 ## 分发
 
 - Gitee：主发布源，`latest.json` 自动更新；
-- GitHub：代码镜像（本仓库）；
+- GitHub：源码、文档和安装包镜像；
 - winget：清单在 `packaging/winget`，PR #470707 审核中；
 - Microsoft Store：MSIX 模板与图标见 `packaging/msix`；
 - 详细分发/签名步骤见 [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)。
