@@ -35,6 +35,13 @@ var zhDetection = LanguageDetector.Detect("你好，世界。");
 Check(zhDetection.Direction == TranslationDirection.ChineseToEnglish, "中文 → 英文方向检测");
 
 Check(AppCompatibility.IsClipboardOnly("wps"), "WPS 走剪贴板");
+Check(AppCompatibility.IsClipboardOnly("VISIO"), "Visio 走剪贴板，跳过不可靠的 UIA");
+Check(AppCompatibility.IsClipboardOnly("visio"), "Visio 进程名匹配不区分大小写");
+Check(!AppCompatibility.IsBrowser("VISIO"), "Visio 不套用浏览器光标规则");
+Check(AppCompatibility.Describe("VISIO", "Drawing1 - Visio", "") == "clipboard/process (VISIO)",
+    "Visio 诊断显示内置剪贴板规则");
+Check(!AppCompatibility.IsClipboardOnly("notepad", "Visio notes.txt - Notepad"),
+    "普通文档标题包含 Visio 不误命中");
 Check(AppCompatibility.IsClipboardOnly("小绿鲸英文文献阅读器"), "小绿鲸走剪贴板");
 Check(
     AppCompatibility.IsClipboardOnly("unknown", "论文.docx - WPS Office"),

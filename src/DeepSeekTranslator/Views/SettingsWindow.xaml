@@ -166,7 +166,7 @@
 
                         <TextBlock Style="{StaticResource HintText}"
                                    Margin="0,6,0,0"
-                                   Text="支持 Word、Edge/Chrome 网页（UIA），以及 PowerPoint、微信、Zotero、PDF（走剪贴板）。拖选文字或双击选词后出现；点一下即可翻译。" />
+                                   Text="支持 Word、Edge/Chrome 网页（UIA），以及 PowerPoint、Visio、微信、Zotero、PDF（走剪贴板）。拖选文字后点一下即可翻译；Visio 请先双击形状或按 F2 进入文字编辑，再拖选文字。" />
 
                         <Grid Margin="0,22,0,0">
                             <StackPanel Orientation="Horizontal">
@@ -378,7 +378,7 @@
                                        Foreground="#475569"
                                        TextWrapping="Wrap"
                                        LineHeight="19"
-                                       Text="Word 优先使用 UI Automation 读取选区；浏览器、PowerPoint、微信、Zotero、PDF 走剪贴板（自动 Ctrl+C）。管理员窗口请手动 Ctrl+C 后按快捷键翻译剪贴板。" />
+                                       Text="Word 优先使用 UI Automation 读取选区；浏览器、PowerPoint、Visio、微信、Zotero、PDF 走剪贴板（自动 Ctrl+C）。管理员窗口请手动 Ctrl+C 后按快捷键翻译剪贴板。" />
                             <Button x:Name="OpenLogsButton"
                                     Style="{StaticResource LinkButton}"
                                     Content="打开日志目录"

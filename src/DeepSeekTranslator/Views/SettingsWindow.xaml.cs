@@ -77,7 +77,7 @@ public partial class SettingsWindow : Window
     private void UpdateUsageHint()
     {
         UsageHintText.Text =
-            $"Word 优先使用 UI Automation 读取选区；浏览器、PowerPoint、微信、Zotero、PDF 走剪贴板（自动 Ctrl+C）。" +
+            $"Word 优先使用 UI Automation 读取选区；浏览器、PowerPoint、Visio、微信、Zotero、PDF 走剪贴板（自动 Ctrl+C）。" +
             $"管理员窗口请手动 Ctrl+C 后按 {_settings.TranslateClipboardHotkey}。";
     }
 

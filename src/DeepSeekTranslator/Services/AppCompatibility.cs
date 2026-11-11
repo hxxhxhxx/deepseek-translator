@@ -7,7 +7,7 @@ namespace DeepSeekTranslator.Services;
 /// 三类原因：
 /// 1. 微信 / Zotero / Foxit / UPDF / Acrobat / SumatraPDF / WPS：
 ///    界面没有可用的 UIA TextPattern，或 UIA 选区不可靠，UIA 必然读不到选区。
-/// 2. PowerPoint（POWERPNT）：
+/// 2. PowerPoint（POWERPNT）/ Visio（VISIO）：
 ///    UIA 里有文本节点，但 GetSelection() 经常返回空范围或整个文本框，
 ///    读不到用户拖选的那一段，因此也按剪贴板处理。
 /// 3. 浏览器 / 小绿鲸（Electron）：
@@ -31,6 +31,8 @@ public static class AppCompatibility
         "AcroRd32",
         "SumatraPDF",
         "POWERPNT",
+        // Visio：先进入形状的文字编辑，再通过 Ctrl+C 读取真正划选的文本。
+        "VISIO",
 
         // WPS Office：文字 / 表格 / 演示 / PDF / 云服务
         "wps",

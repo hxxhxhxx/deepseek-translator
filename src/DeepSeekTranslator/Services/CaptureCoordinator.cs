@@ -114,6 +114,11 @@ public sealed class CaptureCoordinator
             return $"PowerPoint 请先双击文本框进入文字编辑（看到闪烁光标）再拖选；放映模式下没有文本选区，可改用 {OcrHotkey} 截图。";
         }
 
+        if (appName.Equals("VISIO", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Visio 请先双击形状文字，或选中形状后按 F2 进入文字编辑，再拖选要翻译的文字；只选中形状或连接线不等于选中文字。图片或无法复制的内容可用 {OcrHotkey} 截图翻译。";
+        }
+
         if (AppCompatibility.IsBrowser(appName))
         {
             return $"请确认已选中可复制的文字；如果已经手动复制，请按 {ClipboardHotkey}（翻译剪贴板）。";

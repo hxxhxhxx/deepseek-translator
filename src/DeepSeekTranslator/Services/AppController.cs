@@ -1063,7 +1063,7 @@ public sealed class AppController : IDisposable
             var windowTitle = NativeMethods.GetWindowTitle(hwnd);
             var processPath = ElevationHelper.GetProcessPath(processId);
 
-            // 微信 / Zotero / WPS / 小绿鲸 / 部分 PDF 阅读器没有可靠的 UIA 文本选区，
+            // 微信 / Zotero / WPS / 小绿鲸 / Visio / 部分 PDF 阅读器没有可靠的 UIA 文本选区，
             // 拖选后直接给图标，点击时再走「自动 Ctrl+C + 剪贴板」回退。
             if (allowClipboardOnly &&
                 AppCompatibility.IsClipboardOnly(appName, windowTitle, _settings.ForceClipboardApps, processPath))
