@@ -64,6 +64,50 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- 图钉式固定开关：只占一个图标，不把标题栏变成第二排卡片。 -->
+        <Style x:Key="HeaderPinStyle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="PinBorder"
+                                Width="27"
+                                Height="24"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <Path x:Name="PinPath"
+                                  Width="13"
+                                  Height="14"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Data="M12,2 C12,2 19,2 19,8 C19,12 15,14 15,18 L15,21 L9,21 L9,18 C9,14 5,12 5,8 C5,2 12,2 12,2 Z"
+                                  Fill="#94A3B8"
+                                  Stretch="Uniform" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PinBorder" Property="Background" Value="#F1F5F9" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="PinBorder" Property="Background" Value="#EFF6FF" />
+                                <Setter TargetName="PinBorder" Property="BorderBrush" Value="#BFDBFE" />
+                                <Setter TargetName="PinPath" Property="Fill" Value="#2563EB" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="PinBorder" Property="BorderBrush" Value="#93C5FD" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <Grid>
         <Grid Margin="12">
@@ -140,6 +184,14 @@
                                       ToolTip="默认关闭。开启后，在译文中选中词组并松开鼠标，停顿约 0.65 秒会额外调用 DeepSeek；发送原文、译文和选区。相同选区在内存中复用。"
                                       Checked="AlignmentToggle_Changed"
                                       Unchecked="AlignmentToggle_Changed" />
+                            <CheckBox x:Name="PinButton"
+                                      Style="{StaticResource HeaderPinStyle}"
+                                      Margin="0,0,3,0"
+                                      VerticalAlignment="Center"
+                                      AutomationProperties.Name="固定翻译框"
+                                      ToolTip="固定翻译框：新翻译原地刷新，滚动页面不自动关闭"
+                                      Checked="PinButton_Changed"
+                                      Unchecked="PinButton_Changed" />
                             <TextBlock Text="⋮⋮"
                                        FontSize="12"
                                        Foreground="#94A3B8"

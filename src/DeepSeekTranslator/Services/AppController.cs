@@ -574,6 +574,11 @@ public sealed partial class AppController : IDisposable
             _settings.OverlayPinnedTop = top;
             SaveOverlaySettings();
         };
+        _overlay.PinOverlayChanged += enabled =>
+        {
+            _settings.PinOverlay = enabled;
+            SaveOverlaySettings();
+        };
     }
 
     /// <summary>单词详解：音标、词性、释义、搭配和本句含义。</summary>

@@ -43,6 +43,7 @@ public partial class OverlayWindow : Window
     private bool _allowClose;
     private bool _userPositioned;
     private bool _pinned;
+    private bool _syncingPinButton;
     private bool _hasPosition;
     private bool _pinnedPositionActive;
     private (int X, int Y)? _pinnedPixelPosition;
@@ -60,6 +61,7 @@ public partial class OverlayWindow : Window
     {
         InitializeComponent();
         InitializeAlignment();
+        SyncPinButton();
 
         _cardShadow = CardBorder.Effect;
         MaxHeight = Math.Max(360, Math.Min(1000, SystemParameters.WorkArea.Height - 24));
@@ -122,26 +124,62 @@ public partial class OverlayWindow : Window
     /// <summary>固定模式下用户拖动/调整宽度后，上报窗口左上角的屏幕物理像素。</summary>
     public event Action<int, int>? PinnedPositionChanged;
 
+    /// <summary>用户在标题栏切换固定状态时触发；设置页同步保存用。</summary>
+    public event Action<bool>? PinOverlayChanged;
+
     /// <summary>固定翻译框：位置锁定，新翻译原地刷新，滚动不自动关闭。</summary>
     public bool PinOverlay
     {
         get => _pinned;
-        set
+        set => ApplyPinState(value, notify: false);
+    }
+
+    private void ApplyPinState(bool value, bool notify)
+    {
+        if (_pinned == value)
         {
-            if (_pinned == value) return;
-            _pinned = value;
-            if (_pinned)
-            {
-                StopDismissWatcher();
-                _pinnedPositionActive = true;
-                if (IsVisible) CapturePinnedPosition();
-            }
-            else
-            {
-                _userPositioned = false;
-                if (IsVisible) StartDismissWatcher();
-            }
+            SyncPinButton();
+            return;
         }
+
+        _pinned = value;
+        SyncPinButton();
+        if (_pinned)
+        {
+            StopDismissWatcher();
+            _pinnedPositionActive = true;
+            if (IsVisible) CapturePinnedPosition();
+        }
+        else
+        {
+            _userPositioned = false;
+            if (IsVisible) StartDismissWatcher();
+        }
+
+        if (notify) PinOverlayChanged?.Invoke(_pinned);
+    }
+
+    private void SyncPinButton()
+    {
+        if (PinButton is null) return;
+        _syncingPinButton = true;
+        try
+        {
+            PinButton.IsChecked = _pinned;
+            PinButton.ToolTip = _pinned
+                ? "固定翻译框（已固定，点此取消）"
+                : "固定翻译框：新翻译原地刷新，滚动页面不自动关闭";
+        }
+        finally
+        {
+            _syncingPinButton = false;
+        }
+    }
+
+    private void PinButton_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_syncingPinButton) return;
+        ApplyPinState(PinButton.IsChecked == true, notify: true);
     }
 
     /// <summary>恢复上次固定的物理像素位置；窗口显示后会自动 clamp 到可见工作区。</summary>

@@ -13,6 +13,10 @@ public static class PinOverlayUiTests
     {
         var translation = Control<TextBox>(overlay, "TranslationText");
         var updating = Control<TextBlock>(overlay, "UpdatingHint");
+        var pinButton = Control<CheckBox>(overlay, "PinButton");
+        var changed = new List<bool>();
+        void PinChanged(bool value) => changed.Add(value);
+        overlay.PinOverlayChanged += PinChanged;
         var direction = TranslationDirection.EnglishToChinese;
         var first = new TranslationResult("第一段固定译文", "mock", "mock", "mock", "mock", false, 1, 1);
         var second = new TranslationResult("第二段固定译文", "mock", "mock", "mock", "mock", false, 1, 1);
@@ -21,7 +25,16 @@ public static class PinOverlayUiTests
 
         try
         {
-            overlay.PinOverlay = true;
+            check(pinButton.IsChecked != true && !overlay.PinOverlay,
+                "固定模式：标题栏图钉默认未选中");
+            pinButton.IsChecked = true;
+            check(overlay.PinOverlay && changed.Count > 0,
+                "固定模式：标题栏图钉可直接开启并通知保存");
+            overlay.PinOverlay = false;
+            check(pinButton.IsChecked != true,
+                "固定模式：设置状态变化会同步回图钉");
+            pinButton.IsChecked = true;
+
             overlay.ShowLoading(sourceA, new PixelRect(420, 300, 446, 326), direction);
             overlay.ShowResult(first, direction);
             overlay.UpdateLayout();
@@ -76,6 +89,7 @@ public static class PinOverlayUiTests
         }
         finally
         {
+            overlay.PinOverlayChanged -= PinChanged;
             overlay.PinOverlay = false;
             overlay.HideOverlay();
         }
