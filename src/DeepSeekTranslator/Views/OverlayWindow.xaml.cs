@@ -42,6 +42,10 @@ public partial class OverlayWindow : Window
     private TranslationDirection _direction = TranslationDirection.Unknown;
     private bool _allowClose;
     private bool _userPositioned;
+    private bool _pinned;
+    private bool _hasPosition;
+    private bool _pinnedPositionActive;
+    private (int X, int Y)? _pinnedPixelPosition;
     private bool _resizing;
     private bool _dragging;
     private bool _streaming;
@@ -89,6 +93,12 @@ public partial class OverlayWindow : Window
         {
             // 流式输出时文字持续变长，不移动窗口，避免抖动；结果到达后再统一落位。
             if (!IsVisible || _resizing || _streaming) return;
+            if (_pinned)
+            {
+                ClampPinnedPosition();
+                return;
+            }
+
             RepositionAfterLayout();
         };
     }
@@ -108,6 +118,43 @@ public partial class OverlayWindow : Window
 
     /// <summary>用户上下拖动内容区后触发，参数为新的最大高度（DIP）。</summary>
     public event Action<double>? MaxContentHeightChanged;
+
+    /// <summary>固定模式下用户拖动/调整宽度后，上报窗口左上角的屏幕物理像素。</summary>
+    public event Action<int, int>? PinnedPositionChanged;
+
+    /// <summary>固定翻译框：位置锁定，新翻译原地刷新，滚动不自动关闭。</summary>
+    public bool PinOverlay
+    {
+        get => _pinned;
+        set
+        {
+            if (_pinned == value) return;
+            _pinned = value;
+            if (_pinned)
+            {
+                StopDismissWatcher();
+                _pinnedPositionActive = true;
+                if (IsVisible) CapturePinnedPosition();
+            }
+            else
+            {
+                _userPositioned = false;
+                if (IsVisible) StartDismissWatcher();
+            }
+        }
+    }
+
+    /// <summary>恢复上次固定的物理像素位置；窗口显示后会自动 clamp 到可见工作区。</summary>
+    public (int X, int Y)? PreferredPinnedPosition
+    {
+        get => _pinnedPixelPosition;
+        set
+        {
+            _pinnedPixelPosition = value;
+            _hasPosition = value.HasValue;
+            _pinnedPositionActive = value.HasValue;
+        }
+    }
 
     /// <summary>恢复上次使用的宽度；非法值回落到默认 440。</summary>
     public double PreferredWidth
@@ -146,33 +193,64 @@ public partial class OverlayWindow : Window
         PixelRect? anchor,
         TranslationDirection direction)
     {
+        // 固定模式下保留上一段译文，避免新请求期间整块内容闪空、窗口高度跳动。
+        var keepPrevious = _pinned && IsVisible
+            && TranslationText.Visibility == Visibility.Visible
+            && !string.IsNullOrWhiteSpace(TranslationText.Text);
         ResetAlignment();
-        // 新一轮翻译重新跟随选区定位；用户手动拖动的状态在这里清除。
-        _userPositioned = false;
+        if (!_pinned)
+        {
+            // 普通模式：新一轮翻译重新跟随选区定位，用户拖动状态在这里清除。
+            _userPositioned = false;
+            _anchor = anchor;
+        }
+        else if (!_hasPosition || !_pinnedPositionActive)
+        {
+            // 固定模式但本次是“关闭后重新开始”：从新选区旁重新落位。
+            _anchor = anchor;
+            _hasPosition = false;
+            _pinnedPositionActive = true;
+        }
+
         _streaming = false;
         _streamEpoch++;
         StopSpeech();
-        SpeechButton.IsEnabled = false;WordPanel.Visibility = Visibility.Collapsed;
+        SpeechButton.IsEnabled = false;
+        WordPanel.Visibility = Visibility.Collapsed;
         _direction = direction;
         ApplyDirection(direction);
-        _anchor = anchor;
         // 保留完整原文，否则 320 字符后的对齐和单词上下文会丢失。
         OriginalText.Text = original;
         OriginalCountText.Text = $"{original.Length:N0} 字符";
         SetOriginalVisible(true);
 
-        LoadingPanel.Visibility = Visibility.Visible;
         ErrorPanel.Visibility = Visibility.Collapsed;
         ErrorSettingsButton.Visibility = Visibility.Collapsed;
-        TranslationText.Visibility = Visibility.Collapsed;
-        TranslationText.Text = string.Empty;
         WarningPanel.Visibility = Visibility.Collapsed;
-        CopyButton.Visibility = Visibility.Collapsed;
-        CopyButton.Content = "复制全文";
-        RetryButton.Visibility = Visibility.Collapsed;
-        MetaText.Text = "正在请求 DeepSeek…";
         ErrorText.Text = string.Empty;
-        BodyScroller.ScrollToTop();
+        RetryButton.Visibility = Visibility.Collapsed;
+
+        if (keepPrevious)
+        {
+            UpdatingHint.Visibility = Visibility.Visible;
+            LoadingPanel.Visibility = Visibility.Collapsed;
+            TranslationText.Visibility = Visibility.Visible;
+            CopyButton.Visibility = Visibility.Visible;
+            MetaText.Text = "正在更新…";
+            MetaText.ToolTip = "上一段译文会保留到新结果返回";
+        }
+        else
+        {
+            UpdatingHint.Visibility = Visibility.Collapsed;
+            LoadingPanel.Visibility = Visibility.Visible;
+            TranslationText.Visibility = Visibility.Collapsed;
+            TranslationText.Text = string.Empty;
+            CopyButton.Visibility = Visibility.Collapsed;
+            CopyButton.Content = "复制全文";
+            MetaText.Text = "正在请求 DeepSeek…";
+            MetaText.ToolTip = null;
+            BodyScroller.ScrollToTop();
+        }
 
         ShowPanel();
     }
@@ -185,6 +263,7 @@ public partial class OverlayWindow : Window
         _direction = direction;
         ApplyDirection(direction);
         SetOriginalVisible(true);
+        UpdatingHint.Visibility = Visibility.Collapsed;
         LoadingPanel.Visibility = Visibility.Collapsed;
         ErrorPanel.Visibility = Visibility.Collapsed;
         ErrorSettingsButton.Visibility = Visibility.Collapsed;
@@ -225,6 +304,7 @@ public partial class OverlayWindow : Window
         SpeechButton.IsEnabled = false;
         ApplyDirection(direction);
         SetOriginalVisible(true);
+        UpdatingHint.Visibility = Visibility.Collapsed;
         LoadingPanel.Visibility = Visibility.Collapsed;
         ErrorPanel.Visibility = Visibility.Collapsed;
         ErrorSettingsButton.Visibility = Visibility.Collapsed;
@@ -255,6 +335,7 @@ public partial class OverlayWindow : Window
         _streamEpoch++;
         StopSpeech();
         SpeechButton.IsEnabled = false;
+        UpdatingHint.Visibility = Visibility.Collapsed;
         LoadingPanel.Visibility = Visibility.Collapsed;
         TranslationText.Visibility = Visibility.Collapsed;
         TranslationText.Text = string.Empty;
@@ -280,9 +361,17 @@ public partial class OverlayWindow : Window
         }
     }
 
-    public void HideOverlay()
+    public void HideOverlay(bool releasePinnedPosition = true)
     {
         ResetAlignment();
+        UpdatingHint.Visibility = Visibility.Collapsed;
+        if (releasePinnedPosition)
+        {
+            // 明确关闭（×/Esc）后，下一次翻译回到新选区旁，不回到旧位置。
+            _hasPosition = false;
+            _pinnedPositionActive = false;
+        }
+
         _copyResetTimer.Stop();
         StopSpeech();
         StopDismissWatcher();
@@ -333,20 +422,48 @@ public partial class OverlayWindow : Window
 
     private void ShowPanel()
     {
+        var restoreSavedPosition = false;
         if (!IsVisible)
         {
-            // 先按估算高度定位，避免在高 DPI 屏幕上先闪到左上角。
-            if (!_userPositioned)
+            if (_pinned && _pinnedPositionActive && _hasPosition && _pinnedPixelPosition is { } saved)
             {
+                // 恢复上次固定位置；先用当前 DPI 预算 DIP，显示后再按物理像素精确落位。
+                var dpiScale = WindowPos.CurrentDpiScale(this);
+                Left = saved.X / dpiScale;
+                Top = saved.Y / dpiScale;
+                restoreSavedPosition = true;
+            }
+            else if (!_userPositioned)
+            {
+                // 先按估算高度定位，避免在高 DPI 屏幕上先闪到左上角。
                 PositionNearAnchor(estimatedHeight: 360);
             }
 
             Show();
+            if (restoreSavedPosition && _pinnedPixelPosition is { } exact)
+            {
+                // MoveToPixels 不受当前 DPI 影响；再按目标屏工作区收敛一次。
+                WindowPos.MoveToPixels(this, exact.X, exact.Y);
+            }
         }
 
-        // 显示后（句柄已创建）再按物理像素精确落位，跨屏/混合 DPI 时才会落在正确的显示器上。
-        if (!_userPositioned)
+        if (_pinned)
         {
+            // 固定模式：显示后只做边界收敛，不跟随新选区移动。
+            if (_hasPosition)
+            {
+                ClampPinnedPosition();
+            }
+            else
+            {
+                CapturePinnedPosition();
+                _hasPosition = true;
+                _pinnedPositionActive = true;
+            }
+        }
+        else if (!_userPositioned)
+        {
+            // 显示后（句柄已创建）再按物理像素精确落位，跨屏/混合 DPI 时才会落在正确的显示器上。
             RepositionAfterLayout();
             StartDismissWatcher();
         }
@@ -356,11 +473,67 @@ public partial class OverlayWindow : Window
 
     private void RepositionAfterLayout()
     {
+        if (_pinned)
+        {
+            ClampPinnedPosition();
+            return;
+        }
+
         // 用户拖动过之后，不再自动吸附回选区旁，避免“拖不动/弹回去”。
         if (_userPositioned) return;
 
         UpdateLayout();
         PositionNearAnchor(estimatedHeight: Math.Max(220, ActualHeight));
+    }
+
+    private void CapturePinnedPosition()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero || !NativeMethods.GetWindowRect(handle, out var rect)) return;
+        if (rect.Right <= rect.Left || rect.Bottom <= rect.Top) return;
+
+        _pinnedPixelPosition = (rect.Left, rect.Top);
+        _hasPosition = true;
+        _pinnedPositionActive = true;
+    }
+
+    private void ClampPinnedPosition()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero || !NativeMethods.GetWindowRect(handle, out var rect)) return;
+        if (rect.Right <= rect.Left || rect.Bottom <= rect.Top) return;
+
+        var monitor = ScreenGeometry.GetMonitorForPoint(
+            (rect.Left + rect.Right) / 2,
+            (rect.Top + rect.Bottom) / 2);
+        var work = monitor.WorkArea;
+        var width = rect.Right - rect.Left;
+        var height = rect.Bottom - rect.Top;
+        var margin = Math.Max(4, (int)Math.Round(8 * monitor.Scale));
+
+        var x = Math.Clamp(rect.Left, work.Left + margin,
+            Math.Max(work.Left + margin, work.Right - width - margin));
+        var y = Math.Clamp(rect.Top, work.Top + margin,
+            Math.Max(work.Top + margin, work.Bottom - height - margin));
+
+        if (x != rect.Left || y != rect.Top)
+        {
+            WindowPos.MoveToPixels(this, x, y);
+        }
+
+        _pinnedPixelPosition = (x, y);
+        _hasPosition = true;
+        _pinnedPositionActive = true;
+    }
+
+    private void SavePinnedPosition()
+    {
+        if (!_pinned) return;
+        CapturePinnedPosition();
+        if (_pinnedPixelPosition is { } position)
+        {
+            PinnedPositionChanged?.Invoke(position.X, position.Y);
+        }
     }
 
     private void HeaderBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -400,7 +573,12 @@ public partial class OverlayWindow : Window
         var moved = Math.Abs(Left - startLeft) > 0.5 || Math.Abs(Top - startTop) > 0.5;
         if (moved)
         {
-            // 真正拖动过：不再自动吸附回选区旁，也不再自动消失（只有点 × 关闭）。
+            // 真正拖动过：不再自动吸附回选区旁；固定模式收敛到工作区并记住新位置。
+            if (_pinned)
+            {
+                ClampPinnedPosition();
+                SavePinnedPosition();
+            }
             e.Handled = true;
             return;
         }
@@ -446,9 +624,14 @@ public partial class OverlayWindow : Window
         _dragging = false;
         CardBorder.Effect = _cardShadow;
 
-        // 调宽不算“拖动过浮层”，自动消失规则保持不变。
-        if (!_userPositioned)
+        if (_pinned)
         {
+            ClampPinnedPosition();
+            SavePinnedPosition();
+        }
+        else if (!_userPositioned)
+        {
+            // 调宽不算“拖动过浮层”，自动消失规则保持不变。
             StartDismissWatcher();
         }
 
@@ -729,7 +912,8 @@ public partial class OverlayWindow : Window
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        HideOverlay();
+        // 打开设置不是结束固定；保留当前位置，保存后下一段仍可原地刷新。
+        HideOverlay(releasePinnedPosition: false);
         SettingsRequested?.Invoke();
     }
 
@@ -873,7 +1057,7 @@ public partial class OverlayWindow : Window
     /// </summary>
     private void StartDismissWatcher()
     {
-        if (_userPositioned) return;
+        if (_pinned || _userPositioned) return;
 
         if (_inputWatcher is null)
         {
@@ -909,6 +1093,7 @@ public partial class OverlayWindow : Window
 
     private void OnGlobalPointerPressed(int x, int y)
     {
+        if (_pinned) return;
         // 拖动过程中不响应全局监听：排队的事件会按拖动后的窗口位置重新判断，
         // 容易把“按在标题栏上”误判成“点在浮层外”，导致拖动时浮层消失。
         if (_dragging) return;
@@ -923,6 +1108,7 @@ public partial class OverlayWindow : Window
 
     private void OnGlobalWheelScrolled(int x, int y)
     {
+        if (_pinned) return;
         if (_dragging) return;
         if (!IsVisible || IsWithinGracePeriod()) return;
 
@@ -935,6 +1121,7 @@ public partial class OverlayWindow : Window
 
     private void OnGlobalKeyPressed(int virtualKey)
     {
+        if (_pinned) return;
         if (_dragging) return;
         if (!IsVisible || IsWithinGracePeriod()) return;
 

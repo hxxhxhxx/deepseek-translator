@@ -164,6 +164,11 @@
                                   Margin="0,10,0,0"
                                   Content="流式输出：边生成边显示译文" />
 
+                        <CheckBox x:Name="PinOverlayCheckBox"
+                                  Margin="0,10,0,0"
+                                  Content="固定翻译框：拖动后保持位置，新翻译原地刷新"
+                                  ToolTip="开启后，第一次翻译仍出现在选区旁；把浮层拖到目标位置后，后续翻译在原框更新，滚动页面或点击外部不会关闭。点 × 或 Esc 关闭后，下一次翻译回到新选区旁。位置会记住。" />
+
                         <CheckBox x:Name="EnableAlignmentCheckBox"
                                   Margin="0,10,0,0"
                                   Content="译文选词对照原文（AI 估计，额外 API 请求）"

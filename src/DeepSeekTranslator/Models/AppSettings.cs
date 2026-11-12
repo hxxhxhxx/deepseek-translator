@@ -50,6 +50,17 @@ public sealed class AppSettings
     /// <summary>边生成边显示译文；关闭后等完整结果再显示。</summary>
     public bool EnableStreaming { get; set; } = true;
 
+    /// <summary>
+    /// 固定翻译框：新翻译在原位置刷新，滚动/点击外部不自动关闭。
+    /// 关闭后下一次翻译回到新选区旁。
+    /// </summary>
+    public bool PinOverlay { get; set; }
+
+    /// <summary>上次固定的窗口左上角（屏幕物理像素）；跨重启恢复。</summary>
+    public int? OverlayPinnedLeft { get; set; }
+
+    public int? OverlayPinnedTop { get; set; }
+
     /// <summary>用户明确开启后，译文选词触发 AI 原文对照；默认关闭以避免额外计费。</summary>
     public bool EnableAlignment { get; set; }
 

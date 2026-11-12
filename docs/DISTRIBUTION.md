@@ -10,6 +10,8 @@
 | Microsoft Store | 未提交；MSIX 清单、图标和说明已准备，需要 Partner Center 账号 |
 | 代码签名 | 仍是内部自签证书；SignPath Foundation 免费 OSS 申请因表单 reCAPTCHA 无法提交，邮件已备好待发 |
 
+> 1.10.0（固定翻译框）目前只在本机验证，尚未上传 GitHub/Gitee；公开发行版及自动更新仍为 1.9.1。
+
 ---
 
 ## 1. winget

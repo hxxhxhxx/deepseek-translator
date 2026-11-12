@@ -226,6 +226,12 @@ internal static class Program
                     if (!condition) exitCode = 1;
                 });
 
+                await PinOverlayUiTests.RunAsync(overlay, (condition, name) =>
+                {
+                    Console.WriteLine($"{(condition ? "PASS" : "FAIL")}  {name}");
+                    if (!condition) exitCode = 1;
+                });
+
                 overlay.ForceClose();
 
                 var hotkeySettings = new AppSettings

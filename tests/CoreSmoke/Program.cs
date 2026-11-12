@@ -92,6 +92,18 @@ Check(!HotkeyParser.TryParse("Ctrl+C+D", out _), "双击式快捷键必须按同
 Check(!new AppSettings().EnableAlignment, "原文对照默认关闭，避免额外请求");
 Check(JsonSerializer.Deserialize<AppSettings>("{\"EnableStreaming\":true}")?.EnableAlignment == false,
     "旧设置缺少对照字段时保持关闭");
+Check(!new AppSettings().PinOverlay, "固定翻译框默认关闭");
+var pinnedSettings = JsonSerializer.Deserialize<AppSettings>(
+    JsonSerializer.Serialize(new AppSettings
+    {
+        PinOverlay = true,
+        OverlayPinnedLeft = 120,
+        OverlayPinnedTop = 240
+    }));
+Check(pinnedSettings?.PinOverlay == true &&
+      pinnedSettings.OverlayPinnedLeft == 120 &&
+      pinnedSettings.OverlayPinnedTop == 240,
+    "固定模式与位置可持久化");
 
 var secretStore = new SecretStore();
 if (secretStore.HasSecret())

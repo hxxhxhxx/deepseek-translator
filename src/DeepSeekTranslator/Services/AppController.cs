@@ -519,13 +519,21 @@ public sealed partial class AppController : IDisposable
     {
         if (_overlay is not null) return;
 
+        (int X, int Y)? pinnedPosition = null;
+        if (_settings.OverlayPinnedLeft is int pinnedLeft && _settings.OverlayPinnedTop is int pinnedTop)
+        {
+            pinnedPosition = (pinnedLeft, pinnedTop);
+        }
+
         _overlay = new OverlayWindow
         {
             PreferredWidth = _settings.OverlayWidth > 0 ? _settings.OverlayWidth : 440,
             PreferredFontSize = _settings.OverlayFontSize,
             PreferredMaxContentHeight = _settings.OverlayMaxContentHeight,
             PreferredSpeechRate = _settings.SpeechRate,
-            AlignmentEnabled = _settings.EnableAlignment
+            AlignmentEnabled = _settings.EnableAlignment,
+            PreferredPinnedPosition = pinnedPosition,
+            PinOverlay = _settings.PinOverlay
         };
         _overlay.WidthChanged += width =>
         {
@@ -558,6 +566,12 @@ public sealed partial class AppController : IDisposable
         {
             _settings.EnableAlignment = enabled;
             if (!enabled) _alignmentService?.Clear();
+            SaveOverlaySettings();
+        };
+        _overlay.PinnedPositionChanged += (left, top) =>
+        {
+            _settings.OverlayPinnedLeft = left;
+            _settings.OverlayPinnedTop = top;
             SaveOverlaySettings();
         };
     }
@@ -657,7 +671,8 @@ public sealed partial class AppController : IDisposable
 
     private void OpenSettings()
     {
-        _overlay?.HideOverlay();
+        // 从托盘/浮层进入设置时保留固定位置，避免下一次翻译跳回选区。
+        _overlay?.HideOverlay(releasePinnedPosition: false);
         HideSelectionToolbar();
 
         if (_settingsWindow is not null)
@@ -684,6 +699,7 @@ public sealed partial class AppController : IDisposable
             {
                 _overlay.PreferredSpeechRate = settings.SpeechRate;
                 _overlay.AlignmentEnabled = settings.EnableAlignment;
+                _overlay.PinOverlay = settings.PinOverlay;
             }
             _capture.SelectionHotkey = settings.TranslateSelectionHotkey;
             _capture.ClipboardHotkey = settings.TranslateClipboardHotkey;

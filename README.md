@@ -6,15 +6,16 @@
 
 ![浮层示例](docs/overlay-en-zh.png)
 
-**当前版本：1.9.1 · 新增译文选词对照原文**
+**当前版本：1.10.0 · 新增固定翻译框**
 
-> 在译文里选中词组，原文对应片段会以琥珀色高亮。默认关闭；开启后额外调用 API，结果属于 AI 估计，可能有误。右上角「对照」开关可随时关闭。
+> 把翻译浮层拖到喜欢的位置后锁定，新翻译直接在原框刷新；滚动页面、点击浮层外部都不会再把它关掉。设置里可勾选，`×`/`Esc` 结束当前固定。
 
-下载：[Gitee v1.9.1](https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.9.1) · [GitHub v1.9.1](https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.9.1)
+下载：[Gitee v1.10.0](https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.10.0) · [GitHub v1.10.0](https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.10.0)
 
 ## 功能
 
 - **全局划词**：选中文字后鼠标旁出现「译」，点一下即翻译；也支持全局快捷键。
+- **固定翻译框**：设置里勾选后，首次翻译仍出现在选区旁；把浮层拖到目标位置，后续翻译原地刷新，滚动页面或点击外部不会关闭。位置跨重启记住，`×`/`Esc` 后下一次回到新选区旁。
 - **选词对照原文（AI）**：开启标题栏右侧的「对照」后，在译文中选中词组并松开鼠标，稍候会在原文中高亮对应片段；支持多个片段，找不到可靠对应时不高亮。默认关闭，会产生额外 API 请求，结果仅供参考。
 - **Visio**：双击形状文字，或选中形状后按 `F2` 进入文字编辑，拖选文字后点「译」或按选区翻译快捷键；只选中形状/连接线不属于文字选区，Visio 原生复制可能给出整块文字。
 - **WPS / 小绿鲸**：WPS 文字/PDF、小绿鲸英文文献阅读器可直接划词取词。
@@ -38,7 +39,7 @@
 
 下载 `DeepSeekTranslator-<版本>-setup.exe`，双击安装。按用户安装，不需要管理员权限。
 
-**winget（PR #470707：1.7.1 已提交，等待审核；1.9.1 尚未提交）**
+**winget（PR #470707：1.7.1 已提交，等待审核；1.10.0 尚未提交）**
 
 ```powershell
 winget install Hexin.DeepSeekTranslator
@@ -53,6 +54,7 @@ winget install Hexin.DeepSeekTranslator
 3. 翻译剪贴板：`Ctrl+Alt+V`；截图 OCR：`Ctrl+Alt+O`；复制最近译文：`Ctrl+Alt+C`。
 4. 所有快捷键都可以在设置页修改，支持 `Ctrl+C+C` 这类双击式组合。
 5. 选词对照：开启右上角「对照」，在译文中选中词组，松开后停顿约 0.65 秒；原文对应位置会高亮，结果提示显示在原文标题行。
+6. 固定翻译框：设置里勾选「固定翻译框」，先完成一次翻译，把浮层拖到目标位置；之后新翻译会在原框更新。点 `×` 或按 `Esc` 结束当前固定。
 
 ![选词对照原文](docs/alignment-demo.png)
 

@@ -37,6 +37,7 @@ public partial class SettingsWindow : Window
         SelectionIconCheckBox.IsChecked = _settings.ShowSelectionIcon;
         EnableCacheCheckBox.IsChecked = _settings.EnableCache;
         EnableStreamingCheckBox.IsChecked = _settings.EnableStreaming;
+        PinOverlayCheckBox.IsChecked = _settings.PinOverlay;
         EnableAlignmentCheckBox.IsChecked = _settings.EnableAlignment;
         GlossaryBox.Text = _settings.Glossary;
         ForceClipboardAppsBox.Text = _settings.ForceClipboardApps;
@@ -131,6 +132,7 @@ public partial class SettingsWindow : Window
             _settings.ShowSelectionIcon = SelectionIconCheckBox.IsChecked == true;
             _settings.EnableCache = EnableCacheCheckBox.IsChecked == true;
             _settings.EnableStreaming = EnableStreamingCheckBox.IsChecked == true;
+            _settings.PinOverlay = PinOverlayCheckBox.IsChecked == true;
             _settings.EnableAlignment = EnableAlignmentCheckBox.IsChecked == true;
             _settings.Glossary = GlossaryBox.Text.Trim();
             _settings.ForceClipboardApps = ForceClipboardAppsBox.Text.Trim();

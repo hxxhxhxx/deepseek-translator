@@ -252,16 +252,26 @@
                                        Text="译文"
                                        Style="{StaticResource SectionLabel}"
                                        VerticalAlignment="Center" />
-                            <Button x:Name="CopyButton"
-                                    HorizontalAlignment="Right"
-                                    Height="25"
-                                    Padding="9,0"
-                                    FontSize="10.5"
-                                    Style="{StaticResource SecondaryButton}"
-                                    Content="复制全文"
-                                    ToolTip="复制全部译文；只复制一部分请先拖选文字，按 Ctrl+C 或右键"
-                                    Visibility="Collapsed"
-                                    Click="CopyButton_Click" />
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center">
+                                <TextBlock x:Name="UpdatingHint"
+                                           Text="正在更新…"
+                                           FontSize="10.5"
+                                           Foreground="#64748B"
+                                           Margin="0,0,8,0"
+                                           VerticalAlignment="Center"
+                                           Visibility="Collapsed" />
+                                <Button x:Name="CopyButton"
+                                        Height="25"
+                                        Padding="9,0"
+                                        FontSize="10.5"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Content="复制全文"
+                                        ToolTip="复制全部译文；只复制一部分请先拖选文字，按 Ctrl+C 或右键"
+                                        Visibility="Collapsed"
+                                        Click="CopyButton_Click" />
+                            </StackPanel>
                         </Grid>
 
                         <Grid Margin="0,5,0,0">
