@@ -4,13 +4,14 @@
 
 | 渠道 | 状态 |
 | --- | --- |
-| Gitee Releases + `latest.json` 自动更新 | 已上线，1.10.0（安装包 SHA256 `bb56c5c9…`） |
-| GitHub 镜像 | 已同步 1.10.0（源码 commit `2c83f47`），Release v1.10.0 已上传安装包 |
+| Gitee Releases + `latest.json` 自动更新 | 已上线，1.10.1（安装包 SHA256 `384c6318…`） |
+| GitHub 镜像 | 已同步 1.10.1（源码 commit `d2bff55`），Release v1.10.1 已上传安装包 |
 | winget | PR [#470707](https://github.com/microsoft/winget-pkgs/pull/470707) 已提交（1.7.1）；CLA 已确认，等待 moderator |
 | Microsoft Store | 未提交；MSIX 清单、图标和说明已准备，需要 Partner Center 账号 |
 | 代码签名 | 仍是内部自签证书；SignPath Foundation 免费 OSS 申请因表单 reCAPTCHA 无法提交，邮件已备好待发 |
 
-> 1.10.0（固定翻译框）已发布到 Gitee/GitHub；自动更新清单已切换。
+> 1.10.1（标题栏固定图钉）已发布到 Gitee/GitHub；自动更新清单已切换。
+> 为腾出 Gitee 1 GB 仓库附件配额，已删除 1.8.0 之前版本的 **安装包 exe 附件**（发行页和源码包保留），自 v1.8.0 起的安装包不受影响。
 
 ---
 
@@ -54,9 +55,9 @@ winget install --manifest .\packaging\winget\manifests\h\Hexin\DeepSeekTranslato
 
 ## 2. GitHub / Gitee 双源
 
-GitHub 仓库：<https://github.com/hxxhxhxx/deepseek-translator>（已同步到 1.10.0，源码 commit `2c83f47`）。Gitee 源码 commit `54cbd37`；另有发布文档/更新清单同步提交。
+GitHub 仓库：<https://github.com/hxxhxhxx/deepseek-translator>（已同步到 1.10.1，源码 commit `d2bff55`）。Gitee 源码 commit `64fe009`；另有发布文档/更新清单同步提交。
 
-Release：<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.10.0>（附安装包与固定翻译框说明）。Gitee：<https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.10.0>。
+Release：<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.10.1>（附安装包与固定图钉说明）。Gitee：<https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.10.1>。
 
 同步脚本：`scripts/github-sync.ps1`
 
@@ -165,10 +166,10 @@ MSIX 模板里的 `Identity Name` / `Publisher` 必须与 Partner Center 分配�
 
 | 事项 | 结果 |
 | --- | --- |
-| Gitee 发布 | v1.10.0，安装包 53,541,288 字节，SHA256 `bb56c5c9…`，`latest.json` 已更新 |
-| GitHub 同步 | 已同步 1.10.0，源码 commit `2c83f47`；文档与更新清单另有同步提交 |
-| GitHub Release | v1.10.0，安装包 53,541,288 字节，SHA256 `bb56c5c9…` |
-| winget PR | #470707（1.7.1），CLA 已确认，等待 moderator；1.10.0 尚未提交 |
+| Gitee 发布 | v1.10.1，安装包 53,527,872 字节，SHA256 `384c6318…`，`latest.json` 已更新 |
+| GitHub 同步 | 已同步 1.10.1，源码 commit `d2bff55`；文档与更新清单另有同步提交 |
+| GitHub Release | v1.10.1，安装包 53,527,872 字节，SHA256 `384c6318…` |
+| winget PR | #470707（1.7.1），CLA 已确认，等待 moderator；1.10.1 尚未提交 |
 | MSIX 准备 | `packaging/msix/Package.appxmanifest` + `Assets/`（6 张图标，由 `scripts/make-msix-assets.ps1` 生成） |
 | SignPath 申请 | **未提交**：表单的 reCAPTCHA 依赖 `www.gstatic.com`，浏览器加载失败；邮件草稿已备好，待发到 support@signpath.io |
 | 正式证书 | 未购买 |
@@ -177,7 +178,8 @@ MSIX 模板里的 `Identity Name` / `Publisher` 必须与 Partner Center 分配�
 > `packaging/github/build.yml`（CI）。旧的 `github-export/` 快照已删除，避免再推旧代码。
 >
 > 本次已同步两边源码、公开 README、隐私说明、发行说明与分发文档。
-> Gitee 为自动更新主源，GitHub 同时提供源码和安装包镜像；1.10.0 源码和安装包均已上传。
+> Gitee 为自动更新主源，GitHub 同时提供源码和安装包镜像；1.10.1 源码和安装包均已上传。
+> Gitee 附件配额已满，已按“保留 1.8 以后”清理 1.3.4–1.7.1 的安装包 exe，保留发行页和源码包。
 
 ---
 

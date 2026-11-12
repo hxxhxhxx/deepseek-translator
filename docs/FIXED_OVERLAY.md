@@ -39,4 +39,4 @@
 - CaptureSmoke：固定模式新翻译不移动、加载时保留旧译文并显示更新提示、结果替换、关闭后回到新选区、记住/恢复物理位置；标题栏图钉默认关闭、可直接开启并通知保存、设置状态变化会同步回图钉；全部通过。
 - 安装包构建成功，内部自签证书签名 Valid；本机安装程序退出码 0，已安装 **1.10.1**，安装后的 EXE/DLL 与签名发布目录 SHA256 一致。
 - 安装包 53,527,872 字节，SHA256 `384c6318d06d1fe6c298f94ab50966a85701561fc4e385f50291675ff5da8368`。
-- 1.10.0 已发布到 [Gitee](<https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.10.0>) 和 [GitHub](<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.10.0>)，自动更新清单同步更新；1.10.1 标题栏图钉目前只更新本机，尚未上传。
+- 已发布到 [Gitee](<https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.10.1>) 和 [GitHub](<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.10.1>)，自动更新清单同步更新。
