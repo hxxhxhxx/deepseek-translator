@@ -1,9 +1,9 @@
 {
-    "version":  "1.9.1",
-    "url":  "https://gitee.com/hexin1225/deepseek-translator/releases/download/v1.9.1/DeepSeekTranslator-1.9.1-setup.exe",
-    "sha256":  "666d5ffeeff216539e9737027c57db1e801b7eb89aeaf20b7bfb4bc4c1d0ec43",
-    "size":  53516440,
+    "version":  "1.10.0",
+    "url":  "https://gitee.com/hexin1225/deepseek-translator/releases/download/v1.10.0/DeepSeekTranslator-1.10.0-setup.exe",
+    "sha256":  "bb56c5c9f76c94e4cbc6a8cd10e4a03328b5fa2e0f7d78fc0cb151411d113d66",
+    "size":  53541288,
     "mandatory":  false,
-    "notes":  "对照入口移至标题栏右侧轻量胶囊；译文上方不再有常驻卡片，结果提示仅在选词后显示于原文标题行。",
-    "published":  "2026-11-12T10:39:58.5922256+08:00"
+    "notes":  "新增固定翻译框：拖动后锁定位置，新翻译原地刷新，滚动页面不自动关闭；关闭后下一次回到新选区旁，位置跨重启记住。",
+    "published":  "2026-11-12T15:09:19.2812389+08:00"
 }
