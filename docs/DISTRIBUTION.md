@@ -1,11 +1,11 @@
 # 分发与签名
 
-当前状态（2026-11-11）：
+当前状态（2026-11-12）：
 
 | 渠道 | 状态 |
 | --- | --- |
-| Gitee Releases + `latest.json` 自动更新 | 已上线，1.8.2（安装包 SHA256 `6c37f261…`） |
-| GitHub 镜像 | 已同步 1.8.2（源码 commit `50f90c3`），Release v1.8.2 已上传安装包 |
+| Gitee Releases + `latest.json` 自动更新 | 已上线，1.9.1（安装包 SHA256 `666d5ffe…`） |
+| GitHub 镜像 | 已同步 1.9.1（源码 commit `e45453d`），Release v1.9.1 已上传安装包 |
 | winget | PR [#470707](https://github.com/microsoft/winget-pkgs/pull/470707) 已提交（1.7.1）；CLA 已确认，等待 moderator |
 | Microsoft Store | 未提交；MSIX 清单、图标和说明已准备，需要 Partner Center 账号 |
 | 代码签名 | 仍是内部自签证书；SignPath Foundation 免费 OSS 申请因表单 reCAPTCHA 无法提交，邮件已备好待发 |
@@ -52,9 +52,9 @@ winget install --manifest .\packaging\winget\manifests\h\Hexin\DeepSeekTranslato
 
 ## 2. GitHub / Gitee 双源
 
-GitHub 仓库：<https://github.com/hxxhxhxx/deepseek-translator>（已同步到 1.8.2，源码 commit `50f90c3`）。Gitee 源码 commit `5fda170`；另有发布文档/更新清单同步提交。
+GitHub 仓库：<https://github.com/hxxhxhxx/deepseek-translator>（已同步到 1.9.1，源码 commit `e45453d`）。Gitee 源码 commit `bf5cd3c`；另有发布文档/更新清单同步提交。
 
-Release：<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.8.2>（附安装包与 Visio 兼容说明）。
+Release：<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.9.1>（附安装包与译文选词对照说明）。Gitee：<https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.9.1>。
 
 同步脚本：`scripts/github-sync.ps1`
 
@@ -159,14 +159,14 @@ MSIX 模板里的 `Identity Name` / `Publisher` 必须与 Partner Center 分配�
 
 ---
 
-## 5. 2026-11-11 当前进度
+## 5. 2026-11-12 当前进度
 
 | 事项 | 结果 |
 | --- | --- |
-| Gitee 发布 | v1.8.2，安装包 53,480,368 字节，SHA256 `6c37f261…`，`latest.json` 已更新 |
-| GitHub 同步 | 已同步 1.8.2，源码 commit `50f90c3`；文档与更新清单另有同步提交 |
-| GitHub Release | v1.8.2，安装包 53,480,368 字节，SHA256 `6c37f261…` |
-| winget PR | #470707（1.7.1），CLA 已确认，等待 moderator；1.8.2 尚未提交 |
+| Gitee 发布 | v1.9.1，安装包 53,516,440 字节，SHA256 `666d5ffe…`，`latest.json` 已更新 |
+| GitHub 同步 | 已同步 1.9.1，源码 commit `e45453d`；文档与更新清单另有同步提交 |
+| GitHub Release | v1.9.1，安装包 53,516,440 字节，SHA256 `666d5ffe…` |
+| winget PR | #470707（1.7.1），CLA 已确认，等待 moderator；1.9.1 尚未提交 |
 | MSIX 准备 | `packaging/msix/Package.appxmanifest` + `Assets/`（6 张图标，由 `scripts/make-msix-assets.ps1` 生成） |
 | SignPath 申请 | **未提交**：表单的 reCAPTCHA 依赖 `www.gstatic.com`，浏览器加载失败；邮件草稿已备好，待发到 support@signpath.io |
 | 正式证书 | 未购买 |
@@ -174,8 +174,8 @@ MSIX 模板里的 `Identity Name` / `Publisher` 必须与 Partner Center 分配�
 > 分发相关的公开文件：`packaging/public-README.md`（GitHub 首页）、`packaging/public/LICENSE`、
 > `packaging/github/build.yml`（CI）。旧的 `github-export/` 快照已删除，避免再推旧代码。
 >
-> 本次已同步两边源码、公开 README、隐私说明与分发文档。
-> Gitee 为自动更新主源，GitHub 同时提供源码和安装包镜像。
+> 本次已同步两边源码、公开 README、隐私说明、发行说明与分发文档。
+> Gitee 为自动更新主源，GitHub 同时提供源码和安装包镜像；1.9.1 源码和安装包均已上传。
 
 ---
 

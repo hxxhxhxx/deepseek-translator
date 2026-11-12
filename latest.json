@@ -1,9 +1,9 @@
 {
-    "version":  "1.8.2",
-    "url":  "https://gitee.com/hexin1225/deepseek-translator/releases/download/v1.8.2/DeepSeekTranslator-1.8.2-setup.exe",
-    "sha256":  "6c37f261d027339d26959a83d9f3c8cd65b3afc921a50ddd482a3e322480748e",
-    "size":  53480368,
+    "version":  "1.9.1",
+    "url":  "https://gitee.com/hexin1225/deepseek-translator/releases/download/v1.9.1/DeepSeekTranslator-1.9.1-setup.exe",
+    "sha256":  "666d5ffeeff216539e9737027c57db1e801b7eb89aeaf20b7bfb4bc4c1d0ec43",
+    "size":  53516440,
     "mandatory":  false,
-    "notes":  "Visio 划词兼容：先进入形状文字编辑并划选，再点击译或按选区翻译快捷键。",
-    "published":  "2026-11-11T13:59:20.4297199+08:00"
+    "notes":  "对照入口移至标题栏右侧轻量胶囊；译文上方不再有常驻卡片，结果提示仅在选词后显示于原文标题行。",
+    "published":  "2026-11-12T10:39:58.5922256+08:00"
 }

@@ -78,5 +78,5 @@ dotnet run --project tests/AlignmentLiveSmoke/AlignmentLiveSmoke.csproj -c Relea
 - 安装包大小 53,516,440 字节，SHA256：`666d5ffeeff216539e9737027c57db1e801b7eb89aeaf20b7bfb4bc4c1d0ec43`。
 - 本机安装程序退出码 0，已安装 1.9.1；安装后的 EXE/DLL 与签名后的发布目录哈希一致，进程已启动并保持运行。
 - 额外尝试的安装版 UIAutomation 自动选词探针因演示浮层已自动隐藏而未完成，未发送额外 API 请求；不把该探针记作端到端通过。以上服务实测、界面回归和安装验证均已独立完成。
-- 本次临时脚本及新建真实 API 测试的编译中间目录已清除，保留源码、截图、文档和安装包。Gitee/GitHub 公开发行版及自动更新仍为 1.8.2，本次未自动上传 1.9.1。
+- 本次临时脚本及新建真实 API 测试的编译中间目录已清除，保留源码、截图、文档和安装包。1.9.1 已发布到 [Gitee](<https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.9.1>) 和 [GitHub](<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.9.1>)，自动更新清单同步更新。
 
