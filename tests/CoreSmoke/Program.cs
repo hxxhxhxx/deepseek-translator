@@ -89,6 +89,10 @@ Check(HotkeyParser.TryParse("Ctrl+C", out var singleTap) &&
       !singleTap.IsDoubleTap, "普通单键标记为非双击式");
 Check(!HotkeyParser.TryParse("Ctrl+C+D", out _), "双击式快捷键必须按同一个键");
 
+Check(!new AppSettings().EnableAlignment, "原文对照默认关闭，避免额外请求");
+Check(JsonSerializer.Deserialize<AppSettings>("{\"EnableStreaming\":true}")?.EnableAlignment == false,
+    "旧设置缺少对照字段时保持关闭");
+
 var secretStore = new SecretStore();
 if (secretStore.HasSecret())
 {
@@ -295,6 +299,8 @@ using (var client = new DeepSeekClient(new StubHandler(_ =>
         Check(ex.Code == "INVALID_API_KEY", "401 映射为 INVALID_API_KEY");
     }
 }
+
+await AlignmentTests.RunAsync(Check);
 
 if (failures.Count > 0)
 {

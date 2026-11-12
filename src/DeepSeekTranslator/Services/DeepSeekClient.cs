@@ -9,7 +9,7 @@ using DeepSeekTranslator.Models;
 
 namespace DeepSeekTranslator.Services;
 
-public sealed class DeepSeekClient : IDisposable
+public sealed partial class DeepSeekClient : IDisposable
 {
     private const string ChatEndpoint = "https://api.deepseek.com/chat/completions";
     private const string ModelsEndpoint = "https://api.deepseek.com/models";

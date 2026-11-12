@@ -50,6 +50,9 @@ public sealed class AppSettings
     /// <summary>边生成边显示译文；关闭后等完整结果再显示。</summary>
     public bool EnableStreaming { get; set; } = true;
 
+    /// <summary>用户明确开启后，译文选词触发 AI 原文对照；默认关闭以避免额外计费。</summary>
+    public bool EnableAlignment { get; set; }
+
     public string OcrLanguage { get; set; } = "";
 
     public string TranslateSelectionHotkey { get; set; } = "Ctrl+Alt+E";

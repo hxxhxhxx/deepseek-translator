@@ -88,7 +88,11 @@ internal static class Program
                 Win32Test.SetForegroundWindow(handle);
                 await Task.Delay(300);
 
-                if (Win32Test.GetForegroundWindow() != handle)
+                if (Environment.GetEnvironmentVariable("DSH_CAPTURE_CLIPBOARD_SMOKE") != "1")
+                {
+                    Console.WriteLine("SKIP  剪贴板回退（需显式 DSH_CAPTURE_CLIPBOARD_SMOKE=1，默认不触碰用户剪贴板）");
+                }
+                else if (Win32Test.GetForegroundWindow() != handle)
                 {
                     Console.WriteLine("SKIP  剪贴板回退（测试窗口未能取得前台焦点，避免误发 Ctrl+C）");
                 }
@@ -109,14 +113,17 @@ internal static class Program
                     }
                 }
 
-                var wrote = await ClipboardWriter.TrySetTextAsync("clipboard-writer-smoke");
-                if (wrote && System.Windows.Clipboard.GetText() == "clipboard-writer-smoke")
+                if (Environment.GetEnvironmentVariable("DSH_CLIPBOARD_WRITE_SMOKE") == "1")
                 {
-                    Console.WriteLine("PASS  写剪贴板（Win32）");
+                    var wrote = await ClipboardWriter.TrySetTextAsync("clipboard-writer-smoke");
+                    if (wrote && System.Windows.Clipboard.GetText() == "clipboard-writer-smoke")
+                        Console.WriteLine("PASS  写剪贴板（Win32）");
+                    else
+                        Console.WriteLine($"SKIP  写剪贴板未成功（wrote={wrote}，可能被其他程序占用）");
                 }
                 else
                 {
-                    Console.WriteLine($"SKIP  写剪贴板未成功（wrote={wrote}，可能被其他程序占用）");
+                    Console.WriteLine("SKIP  写剪贴板（需显式 DSH_CLIPBOARD_WRITE_SMOKE=1，默认不修改用户剪贴板）");
                 }
 
                 // 流式代次：拖动造成的积压增量不能覆盖已经落地的最终结果。
@@ -212,6 +219,12 @@ internal static class Program
                     Console.WriteLine($"FAIL  浮层内容高度: {bodyScroller?.MaxHeight}");
                     exitCode = 1;
                 }
+
+                await AlignmentUiTests.RunAsync(overlay, (condition, name) =>
+                {
+                    Console.WriteLine($"{(condition ? "PASS" : "FAIL")}  {name}");
+                    if (!condition) exitCode = 1;
+                });
 
                 overlay.ForceClose();
 

@@ -17,6 +17,54 @@
         SnapsToDevicePixels="True"
         PreviewKeyDown="Window_PreviewKeyDown"
         PreviewMouseWheel="Window_PreviewMouseWheel">
+    <Window.Resources>
+        <!-- 标题栏里的轻量模式开关：不使用整行卡片，避免压过译文。 -->
+        <Style x:Key="HeaderToggleStyle" TargetType="CheckBox">
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="Foreground" Value="#64748B" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Pill"
+                                Padding="7,3"
+                                Background="Transparent"
+                                BorderBrush="#E2E8F0"
+                                BorderThickness="1"
+                                CornerRadius="9">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="Dot"
+                                         Width="5"
+                                         Height="5"
+                                         Margin="0,0,4,0"
+                                         Fill="#CBD5E1"
+                                         VerticalAlignment="Center" />
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="#F8FAFC" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Pill" Property="Background" Value="#EFF6FF" />
+                                <Setter TargetName="Pill" Property="BorderBrush" Value="#BFDBFE" />
+                                <Setter TargetName="Dot" Property="Fill" Value="#2563EB" />
+                                <Setter Property="Foreground" Value="#1D4ED8" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Pill" Property="BorderBrush" Value="#93C5FD" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid>
         <Grid Margin="12">
         <Border x:Name="CardBorder"
@@ -73,15 +121,25 @@
                             <TextBlock Text="DeepSeek 翻译"
                                        FontSize="14"
                                        FontWeight="Bold"
-                                       Foreground="{StaticResource InkBrush}" />
+                                       Foreground="{StaticResource InkBrush}"
+                                       TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="选中文本 · 中英互译"
                                        FontSize="10.5"
-                                       Foreground="{StaticResource MutedBrush}" />
+                                       Foreground="{StaticResource MutedBrush}"
+                                       TextTrimming="CharacterEllipsis" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="2"
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center">
+                            <CheckBox x:Name="AlignmentToggle"
+                                      Content="对照"
+                                      Style="{StaticResource HeaderToggleStyle}"
+                                      Margin="0,0,5,0"
+                                      VerticalAlignment="Center"
+                                      ToolTip="默认关闭。开启后，在译文中选中词组并松开鼠标，停顿约 0.65 秒会额外调用 DeepSeek；发送原文、译文和选区。相同选区在内存中复用。"
+                                      Checked="AlignmentToggle_Changed"
+                                      Unchecked="AlignmentToggle_Changed" />
                             <TextBlock Text="⋮⋮"
                                        FontSize="12"
                                        Foreground="#94A3B8"
@@ -106,7 +164,12 @@
                               HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="16,13,16,0">
                         <Grid x:Name="OriginalHeaderRow">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="原文"
                                            Style="{StaticResource SectionLabel}"
                                            VerticalAlignment="Center" />
@@ -117,11 +180,29 @@
                                         ToolTip="先在原文中选中一个单词，再点这里查看词性、释义和用法"
                                         Click="ExplainWordButton_Click" />
                             </StackPanel>
-                            <TextBlock x:Name="OriginalCountText"
+                            <!-- 只在选词后出现的轻量结果提示，和原文高亮放在同一区域。 -->
+                            <TextBlock x:Name="AlignmentStatusText"
+                                       Grid.Column="1"
+                                       Margin="8,0,4,0"
                                        HorizontalAlignment="Right"
                                        VerticalAlignment="Center"
                                        FontSize="10"
-                                       Foreground="#94A3B8" />
+                                       Foreground="#64748B"
+                                       TextTrimming="CharacterEllipsis"
+                                       Visibility="Collapsed" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="AlignmentViewButton"
+                                        Content="查看"
+                                        Style="{StaticResource LinkButton}"
+                                        FontSize="10"
+                                        Margin="0,0,8,0"
+                                        Visibility="Collapsed"
+                                        Click="AlignmentViewButton_Click" />
+                                <TextBlock x:Name="OriginalCountText"
+                                           VerticalAlignment="Center"
+                                           FontSize="10"
+                                           Foreground="#94A3B8" />
+                            </StackPanel>
                         </Grid>
 
                         <Border x:Name="OriginalCard"
@@ -131,7 +212,8 @@
                                 BorderBrush="#EEF2F7"
                                 BorderThickness="1"
                                 CornerRadius="9">
-                            <ScrollViewer MaxHeight="74" VerticalScrollBarVisibility="Auto">
+                            <ScrollViewer x:Name="OriginalScroller" MaxHeight="140" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <AdornerDecorator>
                                 <TextBox x:Name="OriginalText"
                                          FontSize="12"
                                          Foreground="#475569"
@@ -148,8 +230,9 @@
                                          HorizontalScrollBarVisibility="Disabled"
                                          IsInactiveSelectionHighlightEnabled="True"
                                          Cursor="IBeam"
-                                         ToolTip="选中单词后点上方「详解」或右键查询"
-                                         PreviewMouseWheel="TranslationText_PreviewMouseWheel">
+                                         ToolTip="选中单词后点上方「详解」；琥珀色高亮为译文选区对应的原文（AI 估计）"
+                                         PreviewMouseDown="OriginalText_PreviewMouseDown"
+                                         PreviewMouseWheel="OriginalText_PreviewMouseWheel">
                                     <TextBox.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="详解选中单词" Click="ExplainWordButton_Click" />
@@ -158,6 +241,7 @@
                                         </ContextMenu>
                                     </TextBox.ContextMenu>
                                 </TextBox>
+                                </AdornerDecorator>
                             </ScrollViewer>
                         </Border>
 
@@ -258,8 +342,9 @@
                                      HorizontalScrollBarVisibility="Disabled"
                                      IsInactiveSelectionHighlightEnabled="True"
                                      Cursor="IBeam"
-                                     ToolTip="可以拖选部分译文，按 Ctrl+C 或右键复制"
+                                     ToolTip="可以拖选部分译文并复制；开启「选词对照原文」后，松开鼠标稍候会定位对应原文"
                                      Visibility="Collapsed"
+                                     SelectionChanged="TranslationText_SelectionChanged"
                                      PreviewMouseWheel="TranslationText_PreviewMouseWheel">
                                 <TextBox.ContextMenu>
                                     <ContextMenu>

@@ -53,7 +53,7 @@ if ($Publish) {
 
     $sourceStage = Join-Path (Split-Path $output -Parent) "_source-stage"
     if (Test-Path $sourceStage) { Remove-Item -Recurse -Force $sourceStage }
-    robocopy $root $sourceStage /E /XD releases tools bin obj .vs .publish-temp .build-temp github-export .acl-repair secrets .git _source-stage /XF *.user notes-*.txt settings-*.png | Out-Null
+    robocopy $root $sourceStage /E /XD releases tools bin obj .vs .publish-temp .build-temp github-export .acl-repair secrets .git _source-stage _modlens /XF *.user *.pfx *.p12 secret.dat .publish-*.py .publish-state-*.json notes-*.txt settings-*.png | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy source packaging failed: $LASTEXITCODE" }
 
     $sourceZip = Join-Path (Split-Path $output -Parent) "DeepSeekTranslator-$version-source.zip"

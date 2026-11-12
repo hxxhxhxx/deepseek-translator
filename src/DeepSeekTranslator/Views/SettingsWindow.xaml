@@ -164,6 +164,11 @@
                                   Margin="0,10,0,0"
                                   Content="流式输出：边生成边显示译文" />
 
+                        <CheckBox x:Name="EnableAlignmentCheckBox"
+                                  Margin="0,10,0,0"
+                                  Content="译文选词对照原文（AI 估计，额外 API 请求）"
+                                  ToolTip="默认关闭。也可在浮层开启；选词停顿后发送原文、译文与选区，对照结果仅内存缓存，可能产生额外费用。" />
+
                         <TextBlock Style="{StaticResource HintText}"
                                    Margin="0,6,0,0"
                                    Text="支持 Word、Edge/Chrome 网页（UIA），以及 PowerPoint、Visio、微信、Zotero、PDF（走剪贴板）。拖选文字后点一下即可翻译；Visio 请先双击形状或按 F2 进入文字编辑，再拖选文字。" />

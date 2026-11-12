@@ -37,6 +37,7 @@ public partial class SettingsWindow : Window
         SelectionIconCheckBox.IsChecked = _settings.ShowSelectionIcon;
         EnableCacheCheckBox.IsChecked = _settings.EnableCache;
         EnableStreamingCheckBox.IsChecked = _settings.EnableStreaming;
+        EnableAlignmentCheckBox.IsChecked = _settings.EnableAlignment;
         GlossaryBox.Text = _settings.Glossary;
         ForceClipboardAppsBox.Text = _settings.ForceClipboardApps;
         SpeechRateSlider.Value = Math.Clamp(_settings.SpeechRate, 0.5, 2.0);
@@ -130,6 +131,7 @@ public partial class SettingsWindow : Window
             _settings.ShowSelectionIcon = SelectionIconCheckBox.IsChecked == true;
             _settings.EnableCache = EnableCacheCheckBox.IsChecked == true;
             _settings.EnableStreaming = EnableStreamingCheckBox.IsChecked == true;
+            _settings.EnableAlignment = EnableAlignmentCheckBox.IsChecked == true;
             _settings.Glossary = GlossaryBox.Text.Trim();
             _settings.ForceClipboardApps = ForceClipboardAppsBox.Text.Trim();
             _settings.SpeechRate = Math.Clamp(SpeechRateSlider.Value, 0.5, 2.0);

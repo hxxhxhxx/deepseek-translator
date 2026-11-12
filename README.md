@@ -6,13 +6,16 @@
 
 ![浮层示例](docs/overlay-en-zh.png)
 
-**当前版本：1.8.2 · 新增 Visio 划词兼容**
+**当前版本：1.9.1 · 新增译文选词对照原文**
 
-下载：[Gitee v1.8.2](https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.8.2) · [GitHub v1.8.2](https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.8.2)
+> 在译文里选中词组，原文对应片段会以琥珀色高亮。默认关闭；开启后额外调用 API，结果属于 AI 估计，可能有误。右上角「对照」开关可随时关闭。
+
+下载：[Gitee v1.9.1](https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.9.1) · [GitHub v1.9.1](https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.9.1)
 
 ## 功能
 
 - **全局划词**：选中文字后鼠标旁出现「译」，点一下即翻译；也支持全局快捷键。
+- **选词对照原文（AI）**：开启标题栏右侧的「对照」后，在译文中选中词组并松开鼠标，稍候会在原文中高亮对应片段；支持多个片段，找不到可靠对应时不高亮。默认关闭，会产生额外 API 请求，结果仅供参考。
 - **Visio**：双击形状文字，或选中形状后按 `F2` 进入文字编辑，拖选文字后点「译」或按选区翻译快捷键；只选中形状/连接线不属于文字选区，Visio 原生复制可能给出整块文字。
 - **WPS / 小绿鲸**：WPS 文字/PDF、小绿鲸英文文献阅读器可直接划词取词。
 - **Steam**：Steam 商店/社区/聊天可直接划词；游戏内覆盖层走剪贴板。
@@ -35,7 +38,7 @@
 
 下载 `DeepSeekTranslator-<版本>-setup.exe`，双击安装。按用户安装，不需要管理员权限。
 
-**winget（PR #470707：1.7.1 已提交，等待审核；1.8.2 尚未提交）**
+**winget（PR #470707：1.7.1 已提交，等待审核；1.9.1 尚未提交）**
 
 ```powershell
 winget install Hexin.DeepSeekTranslator
@@ -49,6 +52,9 @@ winget install Hexin.DeepSeekTranslator
 2. 在任意软件里选中文字，点鼠标旁的「译」，或按 `Ctrl+Alt+E`。
 3. 翻译剪贴板：`Ctrl+Alt+V`；截图 OCR：`Ctrl+Alt+O`；复制最近译文：`Ctrl+Alt+C`。
 4. 所有快捷键都可以在设置页修改，支持 `Ctrl+C+C` 这类双击式组合。
+5. 选词对照：开启右上角「对照」，在译文中选中词组，松开后停顿约 0.65 秒；原文对应位置会高亮，结果提示显示在原文标题行。
+
+![选词对照原文](docs/alignment-demo.png)
 
 ![设置](docs/settings.png)
 

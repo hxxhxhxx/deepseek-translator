@@ -12,7 +12,7 @@ using Application = System.Windows.Application;
 
 namespace DeepSeekTranslator.Services;
 
-public sealed class AppController : IDisposable
+public sealed partial class AppController : IDisposable
 {
     private readonly SettingsStore _settingsStore = new();
     private readonly SecretStore _secretStore = new();
@@ -524,7 +524,8 @@ public sealed class AppController : IDisposable
             PreferredWidth = _settings.OverlayWidth > 0 ? _settings.OverlayWidth : 440,
             PreferredFontSize = _settings.OverlayFontSize,
             PreferredMaxContentHeight = _settings.OverlayMaxContentHeight,
-            PreferredSpeechRate = _settings.SpeechRate
+            PreferredSpeechRate = _settings.SpeechRate,
+            AlignmentEnabled = _settings.EnableAlignment
         };
         _overlay.WidthChanged += width =>
         {
@@ -551,6 +552,14 @@ public sealed class AppController : IDisposable
         };
         _overlay.SettingsRequested += OpenSettings;
         _overlay.ExplainRequested += (word, context) => RunGuarded(() => ExplainWordAsync(word, context));
+        _overlay.AlignmentRequested += (request, epoch) => _ = AlignTranslationSelectionAsync(request, epoch);
+        _overlay.AlignmentCancelled += CancelAlignment;
+        _overlay.AlignmentEnabledChanged += enabled =>
+        {
+            _settings.EnableAlignment = enabled;
+            if (!enabled) _alignmentService?.Clear();
+            SaveOverlaySettings();
+        };
     }
 
     /// <summary>单词详解：音标、词性、释义、搭配和本句含义。</summary>
@@ -674,6 +683,7 @@ public sealed class AppController : IDisposable
             if (_overlay is not null)
             {
                 _overlay.PreferredSpeechRate = settings.SpeechRate;
+                _overlay.AlignmentEnabled = settings.EnableAlignment;
             }
             _capture.SelectionHotkey = settings.TranslateSelectionHotkey;
             _capture.ClipboardHotkey = settings.TranslateClipboardHotkey;
@@ -859,6 +869,8 @@ public sealed class AppController : IDisposable
     private void ClearTranslationCache()
     {
         _cache.Clear();
+        _alignmentService?.Clear();
+        CancelAlignment();
         Logger.Info("translate: cache cleared");
     }
 

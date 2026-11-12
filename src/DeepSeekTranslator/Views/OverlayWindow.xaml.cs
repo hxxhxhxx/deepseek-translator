@@ -55,6 +55,7 @@ public partial class OverlayWindow : Window
     public OverlayWindow()
     {
         InitializeComponent();
+        InitializeAlignment();
 
         _cardShadow = CardBorder.Effect;
         MaxHeight = Math.Max(360, Math.Min(1000, SystemParameters.WorkArea.Height - 24));
@@ -145,6 +146,7 @@ public partial class OverlayWindow : Window
         PixelRect? anchor,
         TranslationDirection direction)
     {
+        ResetAlignment();
         // 新一轮翻译重新跟随选区定位；用户手动拖动的状态在这里清除。
         _userPositioned = false;
         _streaming = false;
@@ -154,7 +156,8 @@ public partial class OverlayWindow : Window
         _direction = direction;
         ApplyDirection(direction);
         _anchor = anchor;
-        OriginalText.Text = TruncateForDisplay(original, 320);
+        // 保留完整原文，否则 320 字符后的对齐和单词上下文会丢失。
+        OriginalText.Text = original;
         OriginalCountText.Text = $"{original.Length:N0} 字符";
         SetOriginalVisible(true);
 
@@ -176,6 +179,7 @@ public partial class OverlayWindow : Window
 
     public void ShowResult(TranslationResult result, TranslationDirection direction)
     {
+        ResetAlignment();
         _streaming = false;
         _streamEpoch++;
         _direction = direction;
@@ -191,6 +195,7 @@ public partial class OverlayWindow : Window
         CopyButton.Visibility = Visibility.Visible;
         RetryButton.Visibility = Visibility.Visible;
         ErrorText.Text = string.Empty;
+        ResetAlignment(ready: !string.IsNullOrWhiteSpace(OriginalText.Text) && !string.IsNullOrWhiteSpace(result.Translation));
 
         var seconds = (result.LatencyMs / 1000d).ToString("0.0");
         var tokens = result.TotalTokens is int count ? $" · {count} tokens" : string.Empty;
@@ -212,6 +217,7 @@ public partial class OverlayWindow : Window
         // 拖动时 UI 线程被占住，增量会积压；翻译完成的回调可能先执行，
         // 随后积压的旧增量就会把结果覆盖回“正在输出…”。这里按代次直接丢弃过期增量。
         if (epoch != _streamEpoch) return;
+        if (_alignmentReady) ResetAlignment();
 
         _streaming = true;
         _direction = direction;
@@ -244,6 +250,7 @@ public partial class OverlayWindow : Window
         bool showSettings = false,
         bool canRetry = true)
     {
+        ResetAlignment();
         _streaming = false;
         _streamEpoch++;
         StopSpeech();
@@ -275,6 +282,7 @@ public partial class OverlayWindow : Window
 
     public void HideOverlay()
     {
+        ResetAlignment();
         _copyResetTimer.Stop();
         StopSpeech();
         StopDismissWatcher();
@@ -283,6 +291,7 @@ public partial class OverlayWindow : Window
 
     public void ClearOriginal()
     {
+        ResetAlignment();
         OriginalText.Text = string.Empty;
         OriginalCountText.Text = string.Empty;
         SetOriginalVisible(false);
@@ -315,6 +324,7 @@ public partial class OverlayWindow : Window
 
     public void ForceClose()
     {
+        DisposeAlignment();
         _allowClose = true;
         _speech?.Dispose();
         _speech = null;
