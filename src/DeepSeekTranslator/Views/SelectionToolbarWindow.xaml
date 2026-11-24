@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="DeepSeek 划词翻译"
-        Width="60"
-        Height="60"
+        Width="78"
+        Height="58"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -14,35 +14,33 @@
         WindowStartupLocation="Manual"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
-    <Grid Margin="10">
-        <Border x:Name="ButtonBorder"
-                CornerRadius="20"
-                Cursor="Hand"
-                ToolTip="翻译选中的文字">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#2563EB" Offset="0" />
-                    <GradientStop Color="#4F46E5" Offset="1" />
-                </LinearGradientBrush>
-            </Border.Background>
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="10"
-                                  ShadowDepth="2"
-                                  Opacity="0.3"
-                                  Color="#1E3A8A" />
-            </Border.Effect>
-
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Opacity" Value="0.86" />
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-
-            <Grid>
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="36" />
+            <ColumnDefinition Width="6" />
+            <ColumnDefinition Width="20" />
+        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="0" Width="36" Height="36" HorizontalAlignment="Left">
+            <Border x:Name="TranslateButton"
+                    Width="36"
+                    Height="36"
+                    CornerRadius="18"
+                    Cursor="Hand"
+                    ToolTip="翻译选中的文字"
+                    MouseLeftButtonDown="TranslateButton_MouseLeftButtonDown"
+                    MouseLeftButtonUp="TranslateButton_MouseLeftButtonUp">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#2563EB" Offset="0" />
+                        <GradientStop Color="#4F46E5" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="9"
+                                      ShadowDepth="2"
+                                      Opacity="0.3"
+                                      Color="#1E3A8A" />
+                </Border.Effect>
                 <TextBlock Text="译"
                            Foreground="White"
                            FontSize="17"
@@ -50,7 +48,42 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            Margin="0,-1,0,0" />
-            </Grid>
-        </Border>
+            </Border>
+
+        </Grid>
+
+        <!-- 小角标：放在译图标右侧，留出空隙，避免两个按钮误触。 -->
+        <Border x:Name="AddButton"
+                    Grid.Column="2"
+                    Width="20"
+                    Height="20"
+                    Margin="0,-2,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Background="#FFFFFF"
+                    BorderBrush="#93C5FD"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Cursor="Hand"
+                    ToolTip="暂存选中文字，不翻译；继续选下一段后拼接翻译"
+                    MouseLeftButtonDown="AddButton_MouseLeftButtonDown"
+                    MouseLeftButtonUp="AddButton_MouseLeftButtonUp">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#EFF6FF" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Text="+"
+                           Foreground="#2563EB"
+                           FontSize="15"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Margin="0,-1,0,0" />
+            </Border>
     </Grid>
 </Window>

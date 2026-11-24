@@ -105,6 +105,17 @@ Check(pinnedSettings?.PinOverlay == true &&
       pinnedSettings.OverlayPinnedTop == 240,
     "固定模式与位置可持久化");
 
+Check(StitchText.Combine(new[] { "The result is inter-\n", "national. This matters." })
+      == "The result is international. This matters.", "拼接：跨页连字符正常化");
+Check(StitchText.Combine(new[] { "第一句。", "第二句。" }) == "第一句。第二句。",
+    "拼接：中文之间不补空格");
+Check(StitchText.Combine(new[] { "A sentence.", "Next sentence." }) == "A sentence. Next sentence.",
+    "拼接：英文句子补一个空格");
+Check(StitchText.Combine(new[] { "A (", "b)" }) == "A (b)",
+    "拼接：括号前不补多余空格");
+Check(StitchText.Combine(new[] { "first\r\n", "second" }) == "first second",
+    "拼接：CRLF 和空白正常化");
+
 var secretStore = new SecretStore();
 if (secretStore.HasSecret())
 {

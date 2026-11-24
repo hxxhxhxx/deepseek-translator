@@ -5,6 +5,7 @@ public enum CaptureMethod
     Uia,
     Clipboard,
     ManualClipboard,
+    Stitch,
     Ocr
 }
 

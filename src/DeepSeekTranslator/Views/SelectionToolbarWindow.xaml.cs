@@ -29,11 +29,11 @@ public partial class SelectionToolbarWindow : Window
         _autoHideTimer.Tick += (_, _) => HideToolbar();
 
         SourceInitialized += OnSourceInitialized;
-        PreviewMouseLeftButtonDown += OnMouseLeftButtonDown;
-        PreviewMouseLeftButtonUp += OnMouseLeftButtonUp;
     }
 
     public event Action? Clicked;
+
+    public event Action? AddClicked;
 
     public bool IsShown => IsVisible;
 
@@ -111,23 +111,44 @@ public partial class SelectionToolbarWindow : Window
         Close();
     }
 
-    private bool _pressed;
-
-    private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private enum ToolbarAction
     {
-        // 不在按下瞬间触发：点击还没结束，浏览器自带的选区菜单可能仍占着焦点，
-        // 这时发 Ctrl+C 会被吞掉。等鼠标松开、焦点回到文档后再取词。
-        _pressed = true;
+        None,
+        Translate,
+        Add
+    }
+
+    private ToolbarAction _pressedAction;
+
+    private void TranslateButton_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // 不在按下瞬间触发：点击还没结束，浏览器自带的选区菜单可能仍占着焦点。
+        _pressedAction = ToolbarAction.Translate;
         e.Handled = true;
     }
 
-    private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void AddButton_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (!_pressed) return;
-        _pressed = false;
+        _pressedAction = ToolbarAction.Add;
+        e.Handled = true;
+    }
+
+    private void TranslateButton_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_pressedAction != ToolbarAction.Translate) return;
+        _pressedAction = ToolbarAction.None;
         e.Handled = true;
         HideToolbar();
         Clicked?.Invoke();
+    }
+
+    private void AddButton_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_pressedAction != ToolbarAction.Add) return;
+        _pressedAction = ToolbarAction.None;
+        e.Handled = true;
+        HideToolbar();
+        AddClicked?.Invoke();
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)

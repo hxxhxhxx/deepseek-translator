@@ -232,6 +232,12 @@ internal static class Program
                     if (!condition) exitCode = 1;
                 });
 
+                await StitchUiTests.RunAsync((condition, name) =>
+                {
+                    Console.WriteLine($"{(condition ? "PASS" : "FAIL")}  {name}");
+                    if (!condition) exitCode = 1;
+                });
+
                 overlay.ForceClose();
 
                 var hotkeySettings = new AppSettings

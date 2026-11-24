@@ -33,6 +33,9 @@ public sealed partial class AppController : IDisposable
     private UpdateWindow? _updateWindow;
     private SelectionMonitor? _selectionMonitor;
     private SelectionToolbarWindow? _selectionToolbar;
+    private StitchBasketWindow? _stitchBasket;
+    private readonly List<string> _stitchSegments = new();
+    private PixelRect? _stitchAnchor;
     private PixelRect _toolbarRect;
     private int _selectionProbeVersion;
     private long _lastAccessibilityWarmUpTicks;
@@ -1163,6 +1166,11 @@ public sealed partial class AppController : IDisposable
                 HideSelectionToolbar();
                 RunGuarded(TranslateSelectionAsync);
             };
+            toolbar.AddClicked += () =>
+            {
+                HideSelectionToolbar();
+                RunGuarded(AddSelectionToStitchAsync);
+            };
             _selectionToolbar = toolbar;
         }
 
@@ -1172,6 +1180,176 @@ public sealed partial class AppController : IDisposable
     private void HideSelectionToolbar()
     {
         _selectionToolbar?.HideToolbar();
+    }
+
+    private async Task AddSelectionToStitchAsync()
+    {
+        if (_busy)
+        {
+            _tray?.ShowBalloon("请稍候", "当前还有翻译任务在处理，完成后再暂存下一段。", ToolTipIcon.Info);
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var capture = await _capture
+                .CaptureSelectionAsync(_lifetime.Token)
+                .WaitAsync(TimeSpan.FromSeconds(12), _lifetime.Token);
+            var validation = TextValidator.Validate(capture.Text);
+            if (!validation.IsValid)
+            {
+                ShowStitchError(validation.ErrorMessage ?? "这一段没有可翻译的文字。");
+                return;
+            }
+
+            if (_stitchSegments.Count >= 20)
+            {
+                ShowStitchError("一次最多拼接 20 段，请先翻译或清空当前拼接篮。");
+                return;
+            }
+
+            var candidate = StitchText.Combine(_stitchSegments.Append(validation.NormalizedText));
+            if (candidate.Length > TextValidator.MaxChars)
+            {
+                ShowStitchError(
+                    $"拼接后会超过 {TextValidator.MaxChars:N0} 字符上限，请先清空或缩短选段。");
+                return;
+            }
+
+            _stitchSegments.Add(validation.NormalizedText);
+            _stitchAnchor = capture.AnchorRect ?? ScreenGeometry.GetCursorPoint();
+            Logger.Info($"stitch add: app={capture.AppName}, segments={_stitchSegments.Count}, chars={candidate.Length}");
+            ShowStitchBasket();
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+        {
+            // 程序退出中。
+        }
+        catch (TimeoutException)
+        {
+            ShowStitchError("读取选区超时（12 秒）。请重试，或改用手动复制后拼接。");
+        }
+        catch (CaptureException ex)
+        {
+            ShowStitchError(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("暂存拼接选段失败", ex);
+            ShowStitchError("暂存失败，请重试。");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task TranslateStitchAsync()
+    {
+        if (_busy || _stitchSegments.Count == 0) return;
+
+        var combined = StitchText.Combine(_stitchSegments);
+        var validation = TextValidator.Validate(combined);
+        if (!validation.IsValid)
+        {
+            ShowStitchError(validation.ErrorMessage ?? "拼接内容没有可翻译的文字。");
+            return;
+        }
+
+        _busy = true;
+        var succeeded = false;
+        try
+        {
+            _lastTranslation = null;
+            _retryAction = TranslateStitchAsync;
+            _stitchBasket?.SetBusy(true);
+            _stitchBasket?.HideBasket();
+            await TranslateCapturedAsync(new CaptureResult(
+                validation.NormalizedText,
+                _stitchAnchor,
+                CaptureMethod.Stitch,
+                "拼接"));
+            succeeded = !string.IsNullOrWhiteSpace(_lastTranslation);
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+        {
+            // 程序退出中。
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("拼接翻译失败", ex);
+            ShowStitchError("拼接翻译失败，请重试。");
+        }
+        finally
+        {
+            _busy = false;
+            if (succeeded)
+            {
+                ClearStitch();
+            }
+            else if (_stitchSegments.Count > 0)
+            {
+                ShowStitchBasket();
+                _stitchBasket?.SetBusy(false);
+                _stitchBasket?.ShowMessage("翻译未完成，拼接内容已保留，可重试。");
+            }
+        }
+    }
+
+    private StitchBasketWindow EnsureStitchBasket()
+    {
+        if (_stitchBasket is not null) return _stitchBasket;
+
+        var basket = new StitchBasketWindow();
+        basket.TranslateRequested += () => RunGuarded(TranslateStitchAsync);
+        basket.UndoRequested += UndoStitchSegment;
+        basket.ClearRequested += ClearStitch;
+        basket.CloseRequested += ClearStitch;
+        _stitchBasket = basket;
+        return basket;
+    }
+
+    private void ShowStitchBasket()
+    {
+        if (_stitchSegments.Count == 0) return;
+
+        var basket = EnsureStitchBasket();
+        var combined = StitchText.Combine(_stitchSegments);
+        var last = _stitchSegments[^1].Replace('\r', ' ').Replace('\n', ' ');
+        if (last.Length > 150) last = last[..150] + "…";
+        basket.ShowBasket(_stitchSegments.Count, combined.Length, "最近一段：" + last);
+    }
+
+    private void UndoStitchSegment()
+    {
+        if (_stitchSegments.Count == 0) return;
+        _stitchSegments.RemoveAt(_stitchSegments.Count - 1);
+        if (_stitchSegments.Count == 0)
+        {
+            ClearStitch();
+            return;
+        }
+
+        ShowStitchBasket();
+    }
+
+    private void ClearStitch()
+    {
+        _stitchSegments.Clear();
+        _stitchAnchor = null;
+        _stitchBasket?.HideBasket();
+    }
+
+    private void ShowStitchError(string message)
+    {
+        if (_stitchBasket is { IsVisible: true })
+        {
+            _stitchBasket.ShowMessage(message);
+            return;
+        }
+
+        _tray?.ShowBalloon("拼接取词失败", message, ToolTipIcon.Warning);
     }
 
     private async Task RunStartupUpdateCheckAsync()
@@ -1333,6 +1511,9 @@ public sealed partial class AppController : IDisposable
 
         try
         {
+            _stitchBasket?.Close();
+            _stitchBasket = null;
+            _stitchSegments.Clear();
             _settingsWindow?.Close();
             _diagnosticsWindow?.Close();
             _diagnosticsWindow = null;
