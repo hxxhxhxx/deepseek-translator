@@ -1,9 +1,9 @@
 {
-    "version":  "1.10.1",
-    "url":  "https://gitee.com/hexin1225/deepseek-translator/releases/download/v1.10.1/DeepSeekTranslator-1.10.1-setup.exe",
-    "sha256":  "384c6318d06d1fe6c298f94ab50966a85701561fc4e385f50291675ff5da8368",
-    "size":  53527872,
+    "version":  "1.11.2",
+    "url":  "https://gitee.com/hexin1225/deepseek-translator/releases/download/v1.11.2/DeepSeekTranslator-1.11.2-setup.exe",
+    "sha256":  "f83cf202e1347a02ef38941022890d5eb84c421a3356ca7805a9dd60c4c7d764",
+    "size":  53533552,
     "mandatory":  false,
-    "notes":  "标题栏「对照」旁新增固定图钉，可直接开启/取消固定；与设置页状态同步，固定时图钉变蓝。",
-    "published":  "2026-11-12T15:28:00.5735178+08:00"
+    "notes":  "拼接角标移到「译」右侧并留出 6px 空隙，避免误触；工具栏仍保持紧凑。",
+    "published":  "2026-11-24T11:33:19.5174173+08:00"
 }

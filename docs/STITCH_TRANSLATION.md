@@ -43,4 +43,4 @@
 - CaptureSmoke：划词图标 `+` 事件、拼接篮段数/字数/预览、翻译/撤销/清空按钮、忙时禁用操作。
 - 安装包构建与本机安装验证记录见 README 的版本历史。
 - 1.11.2 安装包 53,533,552 字节，SHA256 `f83cf202e1347a02ef38941022890d5eb84c421a3356ca7805a9dd60c4c7d764`；内部自签证书签名 Valid，本机安装后 EXE/DLL 与发布目录一致。
-- 当前仅更新本机；公开发行版仍为 1.10.1。
+- 已发布到 [Gitee](<https://gitee.com/hexin1225/deepseek-translator/releases/tag/v1.11.2>) 和 [GitHub](<https://github.com/hxxhxhxx/deepseek-translator/releases/tag/v1.11.2>)，自动更新清单同步更新。
